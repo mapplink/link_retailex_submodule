@@ -1,0 +1,21 @@
+<?php
+$moduleConfig = array(
+    'node_types'=>array(
+        'retailex'=>array(
+            'entity_type_support'=>array(
+                'customer',
+                'product',
+                'order'
+            ),
+        ),
+        'config'=>array( // Config options to be displayed to the administrator
+            'retailex-url'=>array(
+                'label'=>'REx Url',
+                'type'=>'Text',
+                'required'=>TRUE
+            )
+        )
+    )
+);
+
+return $moduleConfig;
