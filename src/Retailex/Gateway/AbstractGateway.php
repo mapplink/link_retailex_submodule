@@ -44,14 +44,12 @@ abstract class AbstractGateway extends BaseAbstractGateway
      */
     protected function _init($entityType)
     {
-        $this->db = $this->_node->getApi('db');
         $this->soap = $this->_node->getApi('soap');
 
         if (!$this->soap) {
             throw new GatewayException('SOAP is required for Retailex '.ucfirst($entityType));
             $success = FALSE;
         }else{
-            $this->apiOverlappingSeconds += $this->_node->getConfig('api_overlapping_seconds');
             $success = TRUE;
         }
 
