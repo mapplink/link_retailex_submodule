@@ -21,15 +21,14 @@ use Zend\Soap\Client;
 class Soap implements ServiceLocatorAwareInterface
 {
 
+    const SOAP_NAMESPACE = 'http://retailexpress.com.au/';
+    const SOAP_NAME = 'ClientHeader';
     const DEFAULT_WSDL_PREFIX = 'dotnet/admin/webservices/v2/webstore/service.asmx?wsdl';
 
-
-        /** @var Node|NULL $this->node */
+    /** @var Node|NULL $this->node */
     protected $node = NULL;
     /** @var Client|NULL $this->soapClient */
     protected $soapClient = NULL;
-    /** @var string $this->sessionId */
-    protected $sessionId;
 
     /** @var ServiceLocatorInterface $this->serviceLocator */
     protected $serviceLocator;
@@ -72,9 +71,10 @@ class Soap implements ServiceLocatorAwareInterface
     }
 
     /**
+     * @param array $header
      * @return NULL|Client $this->soapClient
      */
-    protected function storeSoapClient()
+    protected function storeSoapClient(array $header)
     {
         $url = trim(trim($this->node->getConfig('retailex-url')), '/');
         $urlPrefix = ltrim(trim($this->node->getConfig('retailex-wsdl')), '/');
@@ -84,7 +84,10 @@ class Soap implements ServiceLocatorAwareInterface
         }
 
         $url .= '/'.$urlPrefix;
+        $soapHeader = new \SoapHeader(self::SOAP_NAMESPACE, self::SOAP_NAME, $header);
+
         $this->soapClient = new Client($url, array('soap_version'=>SOAP_1_2));
+        $this->soapClient->addSoapInputHeader($soapHeader);
 
         return $this->soapClient;
     }
@@ -103,33 +106,23 @@ class Soap implements ServiceLocatorAwareInterface
         }elseif (!is_null($this->soapClient)) {
             throw new MagelinkException('Tried to initialize Soap API twice!');
         }else{
+            $soapHeader =  array(
+                'clientId'=>$this->node->getConfig('retailex-client'),
+                'username'=>$this->node->getConfig('retailex-username'),
+                'password'=>$this->node->getConfig('retailex-password')
+            );
+
             $logLevel = LogService::LEVEL_ERROR;
             $logCode = $this->getInitLogCode();
-            $logData = array();
+            $logData = array('soap header'=>$soapHeader);
 
-            $clientId = $this->node->getConfig('retailex-client');
-            $username = $this->node->getConfig('retailex-username');
-            $password = $this->node->getConfig('retailex-password');
-
-            if (!$clientId || !$username || !$password) {
+            if (!$soapHeader['clientId'] || !$soapHeader['username'] || !$soapHeader['password']) {
                 $logCode .= '_fail';
                 $logMessage = 'SOAP initialisation failed: Please check client id, username and password.';
             }else{
-                $this->storeSoapClient();
-                $loginResult = $this->soapClient->call(
-                    'login', array('ClientID'=>$clientId, 'UserName'=>$username, 'Password'=>$password)
-                );
-//                $loginResult = $this->_processResponse($loginRes);
-                $this->sessionId = $loginResult;
-                $success = (bool) $loginResult;
-
-                if ($success) {
-                    $logLevel = LogService::LEVEL_INFO;
-                    $logMessage = 'SOAP was sucessfully initialised.';
-                }else{
-                    $logCode .= '_err';
-                    $logMessage = 'SOAP initialisation problem.';
-                }
+                $this->storeSoapClient($soapHeader);
+                $logLevel = LogService::LEVEL_INFO;
+                $logMessage = 'SOAP was sucessfully initialised.';
             }
 
             $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $logMessage, $logData);
@@ -156,6 +149,7 @@ class Soap implements ServiceLocatorAwareInterface
                 $success = FALSE;
                 $retry = !$retry;
                 $soapFault = $exception->getPrevious();
+
                 if ($retry === TRUE && (strpos(strtolower($soapFault->getMessage()), 'session expired') !== FALSE
                     || strpos(strtolower($soapFault->getMessage()), 'try to relogin') !== FALSE)) {
 
