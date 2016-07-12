@@ -97,6 +97,7 @@ class Node extends AbstractNode
                 $gateway = new Gateway\CustomerGateway;
                 break;
             case 'product':
+            case 'stockitem':
                 $gateway = new Gateway\ProductGateway;
                 break;
             case 'order':
