@@ -1,14 +1,14 @@
 <?php
 /**
- * RetailEx Abstract Gateway
- * @category RetailEx
- * @package RetailEx\Gateway
+ * Retailex Abstract Gateway
+ * @category Retailex
+ * @package Retailex\Gateway
  * @author Andreas Gerhards <andreas@lero9.co.nz>
  * @copyright Copyright (c) 2016 LERO9 Ltd.
  * @license Commercial - All Rights Reserved
  */
 
-namespace RetailEx\Gateway;
+namespace Retailex\Gateway;
 
 use Magelink\Exception\MagelinkException;
 use Magelink\Exception\GatewayException;
@@ -25,9 +25,9 @@ abstract class AbstractGateway extends BaseAbstractGateway
     /** @var \Entity\Service\EntityConfigService $entityConfigService */
     protected $entityConfigService = NULL;
 
-    /** @var \RetailEx\Api\Db $this->db */
+    /** @var \Retailex\Api\Db $this->db */
     protected $db = NULL;
-    /** @var \RetailEx\Api\Soap $this->soap */
+    /** @var \Retailex\Api\Soap $this->soap */
     protected $soap = NULL;
 
     /** @var int $lastRetrieveTimestamp */
@@ -48,7 +48,7 @@ abstract class AbstractGateway extends BaseAbstractGateway
         $this->soap = $this->_node->getApi('soap');
 
         if (!$this->soap) {
-            throw new GatewayException('SOAP is required for RetailEx '.ucfirst($entityType));
+            throw new GatewayException('SOAP is required for Retailex '.ucfirst($entityType));
             $success = FALSE;
         }else{
             $this->apiOverlappingSeconds += $this->_node->getConfig('api_overlapping_seconds');
@@ -79,7 +79,7 @@ abstract class AbstractGateway extends BaseAbstractGateway
 
     /** @param int $timestamp
      * @return bool|string $date */
-    protected function convertTimestampToRetailExDateFormat($timestamp)
+    protected function convertTimestampToRetailexDateFormat($timestamp)
     {
         $deltaInSeconds = intval($this->_node->getConfig('time_delta_'.static::GATEWAY_ENTITY)) * 3600;
         $date = date('Y-m-d H:i:s', $timestamp + $deltaInSeconds);
@@ -90,7 +90,7 @@ abstract class AbstractGateway extends BaseAbstractGateway
     /** @return bool|string $lastRetrieve */
     protected function getLastRetrieveDate()
     {
-        $lastRetrieve = $this->convertTimestampToRetailExDateFormat($this->getLastRetrieveTimestamp());
+        $lastRetrieve = $this->convertTimestampToRetailexDateFormat($this->getLastRetrieveTimestamp());
         return $lastRetrieve;
     }
 
