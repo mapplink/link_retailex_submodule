@@ -21,7 +21,12 @@ $moduleConfig = array(
         ),
         'config'=>array( // Config options to be displayed to the administrator
             'retailex-url'=>array(
-                'label'=>'REx Url',
+                'label'=>'Retail Express store url',
+                'type'=>'Text',
+                'required'=>TRUE
+            ),
+            'retailex-wsdl'=>array(
+                'label'=>'Retail Express wsdl prefix',
                 'type'=>'Text',
                 'required'=>TRUE
             ),
