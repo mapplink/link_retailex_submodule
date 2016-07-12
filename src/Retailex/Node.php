@@ -63,7 +63,6 @@ class Node extends AbstractNode
     public function getApi($type)
     {
         if (!isset($this->_api[$type])) {
-
             $this->_api[$type] = $this->getServiceLocator()->get('retailex_'.$type);
             $message = 'Creating API instance '.$type;
             $this->getServiceLocator()->get('logService')
