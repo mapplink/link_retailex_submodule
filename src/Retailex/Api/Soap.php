@@ -89,7 +89,7 @@ class Soap implements ServiceLocatorAwareInterface
         $this->soapClient = new Client($url, array('soap_version'=>SOAP_1_2));
         $this->soapClient->addSoapInputHeader($soapHeader);
 
-        return $this->soapClient;
+        return (bool) $this->soapClient;
     }
 
     /**
@@ -120,7 +120,7 @@ class Soap implements ServiceLocatorAwareInterface
                 $logCode .= '_fail';
                 $logMessage = 'SOAP initialisation failed: Please check client id, username and password.';
             }else{
-                $this->storeSoapClient($soapHeader);
+                $success = $this->storeSoapClient($soapHeader);
                 $logLevel = LogService::LEVEL_INFO;
                 $logMessage = 'SOAP was sucessfully initialised.';
             }
@@ -204,8 +204,6 @@ class Soap implements ServiceLocatorAwareInterface
                 $data = array($data);
             }
         }
-
-        array_unshift($data, $this->sessionId);
 
         try{
             $result = $this->soapClient->call($call, $data);
