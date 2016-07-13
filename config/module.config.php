@@ -2,13 +2,14 @@
 $moduleConfig = array(
     'service_manager'=>array(
         'invokables'=>array(
+            'retailexConfigService'=>'Retailex\Service\RetailexConfigService',
             'retailex_soap'=>'Retailex\Api\Soap',
         ),
         'shared'=>array(
-            'retailex_soap'=>FALSE,
+            'retailexConfigService'=>TRUE,
+            'retailex_soap'=>TRUE,
         ),
     ),
-
     'node_types'=>array(
         'retailex'=>array(
             'module'=>'Retailex',
@@ -17,6 +18,11 @@ $moduleConfig = array(
                 'customer',
                 'product',
                 'order'
+            ),
+            'soapheader_config_map'=>array(
+                'ClientID'=>'retailex-client',
+                'UserName'=>'retailex-username',
+                'Password'=>'retailex-password'
             ),
             'config'=>array( // Config options to be displayed to the administrator
                 'retailex-url'=>array(
@@ -44,7 +50,7 @@ $moduleConfig = array(
                     'type'=>'Text',
                     'required'=>TRUE
                 ),
-                'retailex-sales-channel'=>array(
+                'retailex-channel'=>array(
                     'label'=>'Sales Channel Id',
                     'type'=>'Text',
                     'required'=>TRUE
