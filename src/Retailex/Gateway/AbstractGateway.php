@@ -24,12 +24,8 @@ abstract class AbstractGateway extends BaseAbstractGateway
 
     /** @var \Entity\Service\EntityConfigService $entityConfigService */
     protected $entityConfigService = NULL;
-
-    /** @var \Retailex\Api\Db $this->db */
-    protected $db = NULL;
     /** @var \Retailex\Api\Soap $this->soap */
     protected $soap = NULL;
-
     /** @var int $lastRetrieveTimestamp */
     protected $lastRetrieveTimestamp = NULL;
     /** @var int $newRetrieveTimestamp */
