@@ -13,6 +13,7 @@ namespace Retailex\Api;
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
 use Retailex\Node;
+use Retailex\Service\RetailexConfigService;
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 use Zend\Soap\Client;
@@ -23,13 +24,11 @@ class Soap implements ServiceLocatorAwareInterface
 
     const SOAP_NAMESPACE = 'http://retailexpress.com.au/';
     const SOAP_NAME = 'ClientHeader';
-    const DEFAULT_WSDL_PREFIX = 'dotnet/admin/webservices/v2/webstore/service.asmx?wsdl';
 
     /** @var Node|NULL $this->node */
     protected $node = NULL;
     /** @var Client|NULL $this->soapClient */
     protected $soapClient = NULL;
-
     /** @var ServiceLocatorInterface $this->serviceLocator */
     protected $serviceLocator;
 
@@ -76,14 +75,8 @@ class Soap implements ServiceLocatorAwareInterface
      */
     protected function storeSoapClient(array $header)
     {
-        $url = trim(trim($this->node->getConfig('retailex-url')), '/');
-        $urlPrefix = ltrim(trim($this->node->getConfig('retailex-wsdl')), '/');
-
-        if (strlen($urlPrefix) == 0) {
-            $urlPrefix = self::DEFAULT_WSDL_PREFIX;
-        }
-
-        $url .= '/'.$urlPrefix;
+        $url = trim(trim($this->node->getConfig('retailex-url')), '/').'/'
+            .ltrim(trim($this->node->getConfig('retailex-wsdl')), '/');
         $soapHeader = new \SoapHeader(self::SOAP_NAMESPACE, self::SOAP_NAME, $header);
 
         $this->soapClient = new Client($url, array('soap_version'=>SOAP_1_2));
@@ -106,21 +99,29 @@ class Soap implements ServiceLocatorAwareInterface
         }elseif (!is_null($this->soapClient)) {
             throw new MagelinkException('Tried to initialize Soap API twice!');
         }else{
-            $soapHeader =  array(
-                'clientId'=>$this->node->getConfig('retailex-client'),
-                'username'=>$this->node->getConfig('retailex-username'),
-                'password'=>$this->node->getConfig('retailex-password')
-            );
+            /** @var RetailexConfigService $retailexConfigService */
+            $retailexConfigService = $this->getServiceLocator()->get('retailexConfigService');
+            $soapheaderConfigMap = $retailexConfigService->getSoapheaderConfigMap();
+
+            $soapHeaders = array();
+            $soapheaderFields = array();
+            $allSoapheaderFieldsSet = TRUE;
+
+            foreach ($soapheaderConfigMap as $soapheaderKey=>$configKey) {
+                $soapHeaders[$soapheaderKey] = $this->node->getConfig($configKey);
+                $soapheaderFields[] = $soapheaderKey;
+                $allSoapheaderFieldsSet &= $soapHeaders[$soapheaderKey];
+            }
 
             $logLevel = LogService::LEVEL_ERROR;
             $logCode = $this->getInitLogCode();
-            $logData = array('soap header'=>$soapHeader);
+            $logData = array('soap header'=>$soapHeaders);
 
-            if (!$soapHeader['clientId'] || !$soapHeader['username'] || !$soapHeader['password']) {
+            if (!$allSoapheaderFieldsSet) {
                 $logCode .= '_fail';
-                $logMessage = 'SOAP initialisation failed: Please check client id, username and password.';
+                $logMessage = 'SOAP initialisation failed: Please check '.implode(', ', $soapheaderFields).'.';
             }else{
-                $success = $this->storeSoapClient($soapHeader);
+                $success = $this->storeSoapClient($soapHeaders);
                 $logLevel = LogService::LEVEL_INFO;
                 $logMessage = 'SOAP was sucessfully initialised.';
             }
