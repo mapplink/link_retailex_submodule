@@ -19,7 +19,7 @@ use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
 
-class Soap extends SoapCurl
+class SoapCurl implements ServiceLocatorAwareInterface
 {
 
     const SOAP_NAMESPACE = 'http://retailexpress.com.au/';
