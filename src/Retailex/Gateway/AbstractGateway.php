@@ -75,8 +75,7 @@ abstract class AbstractGateway extends BaseAbstractGateway
      * @return bool|string $date */
     protected function convertTimestampToRetailexDateFormat($timestamp)
     {
-        $deltaInSeconds = intval($this->_node->getConfig('time_delta_'.static::GATEWAY_ENTITY)) * 3600;
-        $date = date('Y-m-d H:i:s', $timestamp + $deltaInSeconds);
+        $date = date('Y-m-d', $timestamp).'T'.date('H:i:s', $timestamp).'Z';
 
         return $date;
     }
