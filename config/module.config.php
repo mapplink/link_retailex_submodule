@@ -3,7 +3,8 @@ $moduleConfig = array(
     'service_manager'=>array(
         'invokables'=>array(
             'retailexConfigService'=>'Retailex\Service\RetailexConfigService',
-            'retailex_soap'=>'Retailex\Api\Soap',
+            //'retailex_soap'=>'Retailex\Api\Soap',
+            'retailex_soap'=>'Retailex\Api\SoapCurl',
         ),
         'shared'=>array(
             'retailexConfigService'=>TRUE,
