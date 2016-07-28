@@ -34,7 +34,7 @@ class Soap extends SoapCurl
     /** @var resource|FALSE|NULL $this->curlHandle */
     /** @var string|NULL $this->authorisation */
     /** @var string|NULL $this->requestType */
-    /** @var  Request $this->request */
+    /** @var Request $this->request */
     /** @var array $this->curlOptions */
     /** @var array $this->baseCurlOptions */
     /** @var array $this->clientOptions */
