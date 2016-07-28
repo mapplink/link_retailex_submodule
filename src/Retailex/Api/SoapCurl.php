@@ -98,36 +98,10 @@ class SoapCurl implements ServiceLocatorAwareInterface
     /**
      * @return FALSE|NULL|resource $this->curlHandle
      */
-    protected function initCurl(array $headers)
+    protected function initCurl()
     {
         if (is_null($this->curlHandle)) {
             $this->curlHandle = curl_init();
-        }
-
-        $url = trim(trim($this->node->getConfig('retailex-url')), '/').'/'
-            .ltrim(trim($this->node->getConfig('retailex-wsdl')), '/');
-        /** @var RetailexConfigService $retailexConfigService */
-        $retailexConfigService = $this->getServiceLocator()->get('retailexConfigService');
-        $headerConfigMap = $retailexConfigService->getSoapheaderConfigMap();
-
-        $curlHeaders = array();
-        $allHeaderFieldsSet = TRUE;
-
-        foreach ($headerConfigMap as $headerKey=>$configKey) {
-            $curlHeaders[] = $headerKey.': '.$this->node->getConfig($configKey);
-            $allHeaderFieldsSet = $allHeaderFieldsSet && (strlen($headers[$headerKey]) > 0);
-        }
-
-        $this->curlOptions = array_replace_recursive(
-            $this->baseCurlOptions,
-            array(
-                CURLOPT_URL=>$url,
-                CURLOPT_HTTPHEADER=>array($curlHeaders)
-            )
-        );
-
-        if (!$allHeaderFieldsSet) {
-            $this->curlHandle = FALSE;
         }
 
         return $this->curlHandle;
@@ -170,31 +144,139 @@ class SoapCurl implements ServiceLocatorAwareInterface
      * @param string $call
      * @param array $data
      * @throws \SoapFault
+     * @return bool $success
+     */
+    protected function prepareCall($call, array $data)
+    {
+        $url = trim(trim($this->node->getConfig('retailex-url')), '/').'/'
+            .ltrim(trim($this->node->getConfig('retailex-wsdl')), '/');
+        /** @var RetailexConfigService $retailexConfigService */
+        $retailexConfigService = $this->getServiceLocator()->get('retailexConfigService');
+        $headerConfigMap = $retailexConfigService->getSoapheaderConfigMap();
+
+        $curlHeaders = array();
+        $allHeaderFieldsSet = TRUE;
+        if (isset($this->baseCurlOptions[CURLOPT_HTTPHEADER])) {
+            $curlHeaders = $this->baseCurlOptions[CURLOPT_HTTPHEADER];
+        }
+
+        foreach ($headerConfigMap as $headerKey=>$configKey) {
+            $curlHeader = $headerKey.': '.$this->node->getConfig($configKey);
+            $curlHeaders[] = $curlHeader;
+            $allHeaderFieldsSet = $allHeaderFieldsSet && (strlen($curlHeader) > 0);
+        }
+
+        $soapBody = '';
+        foreach ($data as $key=>$value) {
+            $soapBody .= '<ret:'.$key.'>'.$value.'</ret:'.$key.'>';
+        }
+
+        $preparationSuccessful = $allHeaderFieldsSet && strlen($soapBody) > 0;
+
+        if ($preparationSuccessful) {
+            $soapBody = '<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ret="'
+                .self::SOAP_NAMESPACE.'"><soap:Body><ret:'.$call.'>'.$soapBody.'</ret:'.$call.'></soap:Body>'
+                .'</soap:Envelope>';
+            $this->curlOptions = array_replace_recursive(
+                $this->baseCurlOptions,
+                array(
+                    CURLOPT_URL=>$url,
+                    CURLOPT_HTTPHEADER=>$curlHeaders,
+                    CURLOPT_POSTFIELDS=>$soapBody
+                )
+            );
+            curl_setopt_array($this->curlHandle, $this->curlOptions);
+        }else{
+            $preparationSuccessful = FALSE;
+        }
+
+        return $preparationSuccessful;
+    }
+
+    /**
+     * @param string $call
+     * @param array $data
+     * @throws \SoapFault
      * @return array|mixed $response
      */
-    public function call($call, $data)
+    public function call($call, array $data)
     {
         $retry = FALSE;
+
         do {
             try{
-                $response = $this->_call($call, $data);
-                $success = TRUE;
-            }catch(MagelinkException $exception) {
+                if ($this->prepareCall($call, $data)) {
+                    $response = curl_exec($this->curlHandle);
+                    $error = curl_error($this->curlHandle);
+                }else{
+                    $error = 'Curl preparation failed.';
+                }
+
+                $logData = array(
+                    'options'=>$this->curlOptions,
+                    'curl info'=>curl_getinfo($this->curlHandle)
+                );
+
+                $logCode = 'rex_socu'.substr(strtolower($this->requestType), 0, 2);
+                if ($error) {
+                    $logCode .= '_cerr';
+                    $logMessage = 'Call failed. ERROR: '.$error;
+                    $logData['curl error'] = $error;
+                    $this->getServiceLocator()->get('logService')
+                        ->log(LogService::LEVEL_ERROR, $logCode, $logMessage, $logData);
+                    $response = NULL;
+                }else{
+                    $logData['response'] = $response;
+
+                    if (isset($response[$call]['any'])) {
+                        $response = $response[$call]['any'];
+                    }
+
+                    preg_match('#<soap:Fault>.*?</soap:Fault>#ism', $response, $match);
+                    $soapFault = str_replace('soap:', '', $match[0]);
+                    preg_match('#<soap:Body>(.*?)</soap:Body>#ism', $response, $match);
+                    $response = $match[1];
+
+                    if (strlen($soapFault) > 0) {
+                        $soapFaultXml = new \SimpleXMLElement($soapFault);
+                        $error = '['.$soapFaultXml->Code->Value.'] '.$soapFaultXml->Reason->Text;
+                        $error = preg_replace('#\v+#', ' \ ', $error);
+                        $response = null;
+                    }elseif (strlen($response) > 0) {
+                        $error = FALSE;
+                    }else{
+                        $response = NULL;
+                        $error = 'No valid response from Retail Express.';
+                    }
+
+                    if (strlen($error) == 0) {
+                        $success = TRUE;
+                        $logLevel = LogService::LEVEL_INFO;
+                        $logCode .= '_suc';
+                        $logMessage = 'Curl call succeeded. ';
+                    }else{
+                        $success = FALSE;
+                        $logLevel = LogService::LEVEL_ERROR;
+                        $logCode .= '_fail';
+                        $logMessage = 'Curl call failed. Error message: '.$error;
+                        $logData['error'] = $error;
+                    }
+
+                    $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $logMessage, $logData);
+                }
+            }catch (MagelinkException $exception) {
                 $success = FALSE;
-                $error = curl_error($this->curlHandle);
+                $error = trim(curl_error($this->curlHandle).' '.$exception->getMessage());
                 $retry = !$retry;
             }
         }while ($retry === TRUE && $success === FALSE);
 
         if ($success !== TRUE) {
             $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_ERROR,
-                    'rex_socu_fault',
-                    $exception->getMessage(),
+                ->log(LogService::LEVEL_ERROR, 'rex_socu_fault', $error,
                     array(
                         'data'=>$data,
-                        'curl error'=>$error,
-                        'curl options'=>$this->curlOptions(),
+                        'curl options'=>$this->curlOptions,
                         'curl response'=>$response
                 ));
             // ToDo: Check if this additional logging is necessary
@@ -208,37 +290,6 @@ class SoapCurl implements ServiceLocatorAwareInterface
         }
 
         return $response;
-    }
-
-    /**
-     * @param string $call
-     * @param array $data
-     * @throws \SoapFault
-     * @return array|mixed $response
-     */
-    protected function _call($call, $data)
-    {
-        if (!is_array($data)) {
-            if (is_object($data)) {
-                $data = get_object_vars($data);
-            }else{
-                $data = array($data);
-            }
-        }
-
-        try{
-            $result = $this->soapClient->call($call, $data);
-            $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_DEBUGEXTRA,
-                    'rex_socu_call',
-                    'Successful SOAP call '.$call.'.',
-                    array('data'=>$data, 'result'=>$result)
-                );
-        }catch (\SoapFault $soapFault) {
-            throw new MagelinkException('SOAP Fault with call '.$call.': '.$soapFault->getMessage(), 0, $soapFault);
-        }
-
-        return $result;
     }
 
 }
