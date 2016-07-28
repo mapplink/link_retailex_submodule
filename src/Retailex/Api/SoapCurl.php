@@ -13,8 +13,7 @@ namespace Retailex\Api;
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
 use Retailex\Node;
-use Retailex\Api\Soap\Client;
-use Retailex\Service\RetailexConfigService;
+use Zend\Http\Request;
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
@@ -27,10 +26,37 @@ class SoapCurl implements ServiceLocatorAwareInterface
 
     /** @var Node|NULL $this->node */
     protected $node = NULL;
-    /** @var Client|NULL $this->soapClient */
-    protected $soapClient = NULL;
     /** @var ServiceLocatorInterface $this->serviceLocator */
     protected $serviceLocator;
+
+    /** @var resource|FALSE|NULL $this->curlHandle */
+    protected $curlHandle = NULL;
+    /** @var string|NULL $this->authorisation */
+    protected $authorisation = NULL;
+    /** @var string|NULL $this->requestType */
+    protected $requestType;
+    /** @var  Request $this->request */
+    protected $request;
+    /** @var array $this->curlOptions */
+    protected $curlOptions = array();
+    /** @var array $this->baseCurlOptions */
+    protected $baseCurlOptions = array(
+        CURLOPT_RETURNTRANSFER=>TRUE,
+        CURLOPT_ENCODING=>'',
+        CURLOPT_MAXREDIRS=>10,
+        CURLOPT_TIMEOUT=>30,
+        CURLOPT_HTTP_VERSION=>CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => "POST",
+        CURLOPT_HTTPHEADER => array('cache-control: no-cache', 'content-type: text/xml')
+    );
+    /** @var array $this->clientOptions */
+    protected $clientOptions = array(
+        'adapter'=>'Zend\Http\Client\Adapter\Curl',
+        'curloptions'=>array(CURLOPT_FOLLOWLOCATION=>TRUE),
+        'maxredirects'=>0,
+        'timeout'=>30
+    );
+
 
     /**
      * Get service locator
@@ -62,31 +88,52 @@ class SoapCurl implements ServiceLocatorAwareInterface
     }
 
     /**
-     * @return string $initLogCode
+     * @return string $apiType
      */
-    protected function getInitLogCode()
+    public function getApiType()
     {
-        return 'rex_isoap';
+        return 'soapCurl';
     }
 
     /**
-     * @param array $header
-     * @return NULL|Client $this->soapClient
+     * @return FALSE|NULL|resource $this->curlHandle
      */
-    protected function storeSoapClient(array $header)
+    protected function initCurl(array $headers)
     {
+        if (is_null($this->curlHandle)) {
+            $this->curlHandle = curl_init();
+        }
+
         $url = trim(trim($this->node->getConfig('retailex-url')), '/').'/'
             .ltrim(trim($this->node->getConfig('retailex-wsdl')), '/');
-        $soapHeader = new \SoapHeader(self::SOAP_NAMESPACE, self::SOAP_NAME, $header);
+        /** @var RetailexConfigService $retailexConfigService */
+        $retailexConfigService = $this->getServiceLocator()->get('retailexConfigService');
+        $headerConfigMap = $retailexConfigService->getSoapheaderConfigMap();
 
-        $this->soapClient = new Client($url, array('soap_version'=>SOAP_1_2));
-        $this->soapClient->addSoapInputHeader($soapHeader);
+        $curlHeaders = array();
+        $allHeaderFieldsSet = TRUE;
 
-        return (bool) $this->soapClient;
+        foreach ($headerConfigMap as $headerKey=>$configKey) {
+            $curlHeaders[] = $headerKey.': '.$this->node->getConfig($configKey);
+            $allHeaderFieldsSet = $allHeaderFieldsSet && (strlen($headers[$headerKey]) > 0);
+        }
+
+        $this->curlOptions = array_replace_recursive(
+            $this->baseCurlOptions,
+            array(
+                CURLOPT_URL=>$url,
+                CURLOPT_HTTPHEADER=>array($curlHeaders)
+            )
+        );
+
+        if (!$allHeaderFieldsSet) {
+            $this->curlHandle = FALSE;
+        }
+
+        return $this->curlHandle;
     }
 
     /**
-     * Sets up the SOAP API, connects to Retail Express, and performs a login.
      * @return bool Whether we successfully connected
      * @throws MagelinkException If this API has already been initialized
      */
@@ -96,34 +143,21 @@ class SoapCurl implements ServiceLocatorAwareInterface
 
         if (is_null($this->node)) {
             throw new MagelinkException('Retail Express node is not available on the SOAP API!');
-        }elseif (!is_null($this->soapClient)) {
-            throw new MagelinkException('Tried to initialize Soap API twice!');
+        }elseif (!is_null($this->curlHandle)) {
+            throw new MagelinkException('Tried to initialize SoapCurl API twice!');
         }else{
-            /** @var RetailexConfigService $retailexConfigService */
-            $retailexConfigService = $this->getServiceLocator()->get('retailexConfigService');
-            $soapheaderConfigMap = $retailexConfigService->getSoapheaderConfigMap();
+            $success = $this->initCurl() !== FALSE;
 
-            $soapHeaders = array();
-            $soapheaderFields = array();
-            $allSoapheaderFieldsSet = TRUE;
+            $logCode = 'rex_isocu';
+            $logData = array('base curl options'=>$this->curlOptions);
 
-            foreach ($soapheaderConfigMap as $soapheaderKey=>$configKey) {
-                $soapHeaders[$soapheaderKey] = $this->node->getConfig($configKey);
-                $soapheaderFields[] = $soapheaderKey;
-                $allSoapheaderFieldsSet = $allSoapheaderFieldsSet && (strlen($soapHeaders[$soapheaderKey]) > 0);
-            }
-
-            $logLevel = LogService::LEVEL_ERROR;
-            $logCode = $this->getInitLogCode();
-            $logData = array('soap header'=>$soapHeaders);
-
-            if (!$allSoapheaderFieldsSet) {
-                $logCode .= '_fail';
-                $logMessage = 'SOAP initialisation failed: Please check '.implode(', ', $soapheaderFields).'.';
-            }else{
-                $success = $this->storeSoapClient($soapHeaders);
+            if ($success) {
                 $logLevel = LogService::LEVEL_INFO;
-                $logMessage = 'SOAP was sucessfully initialised.';
+                $logMessage = 'SoapCurl was sucessfully initialised.';
+            }else{
+                $logLevel = LogService::LEVEL_ERROR;
+                $logCode .= '_fail';
+                $logMessage = 'SoapCurl initialisation failed.';
             }
 
             $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $logMessage, $logData);
@@ -133,70 +167,54 @@ class SoapCurl implements ServiceLocatorAwareInterface
     }
 
     /**
-     * Make a call to SOAP API, automatically adding required headers/sessions/etc and processing response
-     * @param string $call The name of the call to make
-     * @param array $data The data to be passed to the call (as associative/numerical arrays)
+     * @param string $call
+     * @param array $data
      * @throws \SoapFault
-     * @return array|mixed Response data
+     * @return array|mixed $response
      */
     public function call($call, $data)
     {
         $retry = FALSE;
         do {
             try{
-                $result = $this->_call($call, $data);
+                $response = $this->_call($call, $data);
                 $success = TRUE;
             }catch(MagelinkException $exception) {
                 $success = FALSE;
+                $error = curl_error($this->curlHandle);
                 $retry = !$retry;
-                $soapFault = $exception->getPrevious();
-
-                if ($retry === TRUE && (strpos(strtolower($soapFault->getMessage()), 'session expired') !== FALSE
-                    || strpos(strtolower($soapFault->getMessage()), 'try to relogin') !== FALSE)) {
-
-                    $this->soapClient = NULL;
-                    $this->_init();
-                }
             }
         }while ($retry === TRUE && $success === FALSE);
 
         if ($success !== TRUE) {
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_ERROR,
-                    'rex_soap_fault',
+                    'rex_socu_fault',
                     $exception->getMessage(),
                     array(
                         'data'=>$data,
-                        'code'=>$soapFault->getCode(),
-                        'trace'=>$soapFault->getTraceAsString(),
-//                        'request'=>$this->soapClient->getLastRequest(),
-//                        'response'=>$this->soapClient->getLastResponse()
+                        'curl error'=>$error,
+                        'curl options'=>$this->curlOptions(),
+                        'curl response'=>$response
                 ));
             // ToDo: Check if this additional logging is necessary
             $this->forceStdoutDebug();
             throw $exception;
             $result = NULL;
         }else{
-            $result = $this->_processResponse($result);
-            /* ToDo: Investigate if that could be centralised
-            if (isset($result['result'])) {
-                $result = $result['result'];
-            }*/
-
             $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_DEBUG, 'rex_soap_success', 'Successfully soap call: '.$call,
-                    array('call'=>$call, 'data'=>$data, 'result'=>$result));
+                ->log(LogService::LEVEL_DEBUG, 'rex_socu_success', 'Successful soap curl call: '.$call,
+                    array('call'=>$call, 'data'=>$data, 'response'=>$response));
         }
 
-        return $result;
+        return $response;
     }
 
     /**
-     * Make a call to SOAP API, automatically adding required headers/sessions/etc and processing response
-     * @param string $call The name of the call to make
-     * @param array $data The data to be passed to the call (as associative/numerical arrays)
+     * @param string $call
+     * @param array $data
      * @throws \SoapFault
-     * @return array|mixed Response data
+     * @return array|mixed $response
      */
     protected function _call($call, $data)
     {
@@ -212,47 +230,12 @@ class SoapCurl implements ServiceLocatorAwareInterface
             $result = $this->soapClient->call($call, $data);
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_DEBUGEXTRA,
-                    'rex_soap_call',
+                    'rex_socu_call',
                     'Successful SOAP call '.$call.'.',
                     array('data'=>$data, 'result'=>$result)
                 );
         }catch (\SoapFault $soapFault) {
             throw new MagelinkException('SOAP Fault with call '.$call.': '.$soapFault->getMessage(), 0, $soapFault);
-        }
-
-        return $result;
-    }
-
-    /**
-     * Forced debug output to command line
-     */
-    public function forceStdoutDebug()
-    {
-//        echo PHP_EOL.$this->soapClient->getLastRequest().PHP_EOL.$this->soapClient->getLastResponse().PHP_EOL;
-    }
-
-    /**
-     * Processes response from SOAP api to convert all std_class object structures to associative/numerical arrays
-     * @param mixed $array
-     * @return array
-     */
-    protected function _processResponse($array)
-    {
-        if (is_object($array)) {
-            $array = get_object_vars($array);
-        }
-
-        $result = $array;
-        if (is_array($array)) {
-            foreach ($result as $key=>$value) {
-                if (is_object($value) || is_array($value)){
-                    $result[$key] = $this->_processResponse($value);
-                }
-            }
-        }
-
-        if (is_object($result)) {
-            $result = get_object_vars($result);
         }
 
         return $result;

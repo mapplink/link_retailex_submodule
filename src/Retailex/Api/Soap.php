@@ -22,51 +22,30 @@ use Zend\ServiceManager\ServiceLocatorInterface;
 class Soap extends SoapCurl
 {
 
-    const SOAP_NAMESPACE = 'http://retailexpress.com.au/';
-    const SOAP_NAME = 'ClientHeader';
+    /** const SOAP_NAMESPACE = 'http://retailexpress.com.au/'; */
+    /** const SOAP_NAME = 'ClientHeader'; */
 
     /** @var Node|NULL $this->node */
-    protected $node = NULL;
     /** @var Client|NULL $this->soapClient */
     protected $soapClient = NULL;
+
     /** @var ServiceLocatorInterface $this->serviceLocator */
-    protected $serviceLocator;
+
+    /** @var resource|FALSE|NULL $this->curlHandle */
+    /** @var string|NULL $this->authorisation */
+    /** @var string|NULL $this->requestType */
+    /** @var  Request $this->request */
+    /** @var array $this->curlOptions */
+    /** @var array $this->baseCurlOptions */
+    /** @var array $this->clientOptions */
+
 
     /**
-     * Get service locator
-     * @return ServiceLocatorInterface
+     * @return string $apiType
      */
-    public function getServiceLocator()
+    public function getApiType()
     {
-        return $this->serviceLocator;
-    }
-
-    /**
-     * Set service locator
-     * @param ServiceLocatorInterface $serviceLocator
-     */
-    public function setServiceLocator(ServiceLocatorInterface $serviceLocator)
-    {
-        $this->serviceLocator = $serviceLocator;
-    }
-
-    /**
-     * @param Node $retailexNode The Magento node we are representing communications for
-     * @return bool Whether we successfully connected
-     * @throws MagelinkException If this API has already been initialized
-     */
-    public function init(Node $retailexNode)
-    {
-        $this->node = $retailexNode;
-        return $this->_init();
-    }
-
-    /**
-     * @return string $initLogCode
-     */
-    protected function getInitLogCode()
-    {
-        return 'rex_isoap';
+        return 'soap';
     }
 
     /**
@@ -114,7 +93,7 @@ class Soap extends SoapCurl
             }
 
             $logLevel = LogService::LEVEL_ERROR;
-            $logCode = $this->getInitLogCode();
+            $logCode = 'rex_isoap';
             $logData = array('soap header'=>$soapHeaders);
 
             if (!$allSoapheaderFieldsSet) {
@@ -172,8 +151,7 @@ class Soap extends SoapCurl
 //                        'request'=>$this->soapClient->getLastRequest(),
 //                        'response'=>$this->soapClient->getLastResponse()
                 ));
-            // ToDo: Check if this additional logging is necessary
-            $this->forceStdoutDebug();
+
             throw $exception;
             $result = NULL;
         }else{
@@ -221,14 +199,6 @@ class Soap extends SoapCurl
         }
 
         return $result;
-    }
-
-    /**
-     * Forced debug output to command line
-     */
-    public function forceStdoutDebug()
-    {
-//        echo PHP_EOL.$this->soapClient->getLastRequest().PHP_EOL.$this->soapClient->getLastResponse().PHP_EOL;
     }
 
     /**
