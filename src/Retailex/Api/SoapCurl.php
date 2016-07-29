@@ -12,6 +12,7 @@ namespace Retailex\Api;
 
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
+use MyProject\Proxies\__CG__\stdClass;
 use Retailex\Node;
 use Zend\Http\Request;
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
@@ -194,10 +195,20 @@ class SoapCurl implements ServiceLocatorAwareInterface
     }
 
     /**
+     * @param string $xmlString
+     * @return \SimpleXMLElement $xml
+     */
+    protected function createSimpleXml($xmlString)
+    {
+        libxml_use_internal_errors(TRUE);
+        $xml = simplexml_load_string($xmlString);
+
+        return $xml;
+    }
+    /**
      * @param string $call
      * @param array $data
-     * @throws \SoapFault
-     * @return array|mixed $response
+     * @return \SimpleXMLElement|NULL $responseXml
      */
     public function call($call, array $data)
     {
@@ -224,28 +235,46 @@ class SoapCurl implements ServiceLocatorAwareInterface
                     $logData['curl error'] = $error;
                     $this->getServiceLocator()->get('logService')
                         ->log(LogService::LEVEL_ERROR, $logCode, $logMessage, $logData);
-                    $response = NULL;
-                }else{
+                    $responseXml = NULL;
+                }else {
                     $logData['response'] = $response;
 
                     if (isset($response[$call]['any'])) {
                         $response = $response[$call]['any'];
                     }
 
-                    preg_match('#<soap:Fault>.*?</soap:Fault>#ism', $response, $match);
-                    $soapFault = str_replace('soap:', '', $match[0]);
-                    preg_match('#<soap:Body>(.*?)</soap:Body>#ism', $response, $match);
-                    $response = $match[1];
+                    preg_match('#<soap:Fault>.*?</soap:Fault>#ism', $response, $soapFaultMatches);
+                    preg_match('#<soap:Body>(.*?)</soap:Body>#ism', $response, $responseMatches);
 
-                    if (strlen($soapFault) > 0) {
-                        $soapFaultXml = new \SimpleXMLElement($soapFault);
-                        $error = '['.$soapFaultXml->Code->Value.'] '.$soapFaultXml->Reason->Text;
+                    try{
+                        if (isset($soapFaultMatches[0])) {
+                            $responseXml = NULL;
+                            $soapFault = str_replace('soap:', '', $soapFaultMatches[0]);
+                            $soapFaultObject = $this->createSimpleXml($soapFault);
+                        }elseif (isset($responseMatches[1])) {
+                            $responseXml = $this->createSimpleXml($responseMatches[1]);
+                            $soapFaultObject = NULL;
+                        }else{
+                            $responseXml = NULL;
+                            $soapFaultObject = (object) array(
+                                'Code'=>array('Value'=>'ukwn'),
+                                'Reason'=>array('Text'=>'Unknow problem with the soap response.')
+                            );
+                        }
+                    }catch (\Exception $exception) {
+                        $responseXml = NULL;
+                        $soapFaultObject = (object) array(
+                            'Code'=>array('Value'=>$exception->getCode()),
+                            'Reason'=>array('Text'=>$exception->getMessage())
+                        );
+                    }
+
+                    if (isset($soapFaultObject)) {
+                        $error = '['.$soapFaultObject->Code->Value.'] '.$soapFaultObject->Reason->Text;
                         $error = preg_replace('#\v+#', ' \ ', $error);
-                        $response = null;
-                    }elseif (strlen($response) > 0) {
+                    }elseif (isset($responseXml)) {
                         $error = FALSE;
                     }else{
-                        $response = NULL;
                         $error = 'No valid response from Retail Express.';
                     }
 
@@ -279,17 +308,14 @@ class SoapCurl implements ServiceLocatorAwareInterface
                         'curl options'=>$this->curlOptions,
                         'curl response'=>$response
                 ));
-            // ToDo: Check if this additional logging is necessary
-            $this->forceStdoutDebug();
-            throw $exception;
-            $result = NULL;
+            $responseXml = NULL;
         }else{
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_DEBUG, 'rex_socu_success', 'Successful soap curl call: '.$call,
                     array('call'=>$call, 'data'=>$data, 'response'=>$response));
         }
 
-        return $response;
+        return $responseXml;
     }
 
 }
