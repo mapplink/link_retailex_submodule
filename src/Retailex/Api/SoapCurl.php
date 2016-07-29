@@ -226,15 +226,20 @@ class SoapCurl implements ServiceLocatorAwareInterface
                     $this->getServiceLocator()->get('logService')
                         ->log(LogService::LEVEL_ERROR, $logCode, $logMessage, $logData);
                     $responseXml = NULL;
-                }else {
-                    $logData['response'] = $response;
-
-                    if (isset($response[$call]['any'])) {
-                        $response = $response[$call]['any'];
+                }else{
+//$response = file_get_contents('/Users/andreasg/projects/lnomd/data/rex_pds.gz');
+                    if ($unGzipped = @gzdecode($response)) {
+                        $soapFaultMatches = NULL;
+                        $response = $unGzipped;
+                        $responseMatches = array(1=>$response);
+                    }else{
+                        if (isset($response[$call]['any'])) {
+                            $response = $response[$call]['any'];
+                        }
+                        preg_match('#<soap:Fault>.*?</soap:Fault>#ism', $response, $soapFaultMatches);
+                        preg_match('#<soap:Body>(.*?)</soap:Body>#ism', $response, $responseMatches);
                     }
-
-                    preg_match('#<soap:Fault>.*?</soap:Fault>#ism', $response, $soapFaultMatches);
-                    preg_match('#<soap:Body>(.*?)</soap:Body>#ism', $response, $responseMatches);
+                    $logData['response'] = mb_substr($response, 0, 1024);
 
                     try{
                         if (isset($soapFaultMatches[0])) {
@@ -291,17 +296,16 @@ class SoapCurl implements ServiceLocatorAwareInterface
 
         if ($success !== TRUE) {
             $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_ERROR, 'rex_socu_fault', $error,
-                    array(
-                        'data'=>$data,
-                        'curl options'=>$this->curlOptions,
-                        'curl response'=>$response
+                ->log(LogService::LEVEL_ERROR, 'rex_socu_fault', $error, array(
+                    'data'=>$data,
+                    'curl options'=>$this->curlOptions,
+                    'curl response'=>mb_substr($response, 0, 1024)
                 ));
             $responseXml = NULL;
         }else{
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_DEBUG, 'rex_socu_success', 'Successful soap curl call: '.$call,
-                    array('call'=>$call, 'data'=>$data, 'response'=>$response));
+                    array('call'=>$call, 'data'=>$data, 'response'=>mb_substr($response, 0, 1024)));
         }
 
         return $responseXml;
