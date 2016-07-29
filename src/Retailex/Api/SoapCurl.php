@@ -195,17 +195,6 @@ class SoapCurl implements ServiceLocatorAwareInterface
     }
 
     /**
-     * @param string $xmlString
-     * @return \SimpleXMLElement $xml
-     */
-    protected function createSimpleXml($xmlString)
-    {
-        libxml_use_internal_errors(TRUE);
-        $xml = simplexml_load_string($xmlString);
-
-        return $xml;
-    }
-    /**
      * @param string $call
      * @param array $data
      * @return \SimpleXMLElement|NULL $responseXml
@@ -213,6 +202,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
     public function call($call, array $data)
     {
         $retry = FALSE;
+        libxml_use_internal_errors(TRUE);
 
         do {
             try{
@@ -249,23 +239,22 @@ class SoapCurl implements ServiceLocatorAwareInterface
                     try{
                         if (isset($soapFaultMatches[0])) {
                             $responseXml = NULL;
-                            $soapFault = str_replace('soap:', '', $soapFaultMatches[0]);
-                            $soapFaultObject = $this->createSimpleXml($soapFault);
+                            $soapFaultObject = new \SimpleXMLElement(str_replace('soap:', '', $soapFaultMatches[0]));
                         }elseif (isset($responseMatches[1])) {
-                            $responseXml = $this->createSimpleXml($responseMatches[1]);
+                            $responseXml = new \SimpleXMLElement($responseMatches[1]);
                             $soapFaultObject = NULL;
                         }else{
                             $responseXml = NULL;
                             $soapFaultObject = (object) array(
-                                'Code'=>array('Value'=>'ukwn'),
-                                'Reason'=>array('Text'=>'Unknow problem with the soap response.')
+                                'Code'=>(object) array('Value'=>'ukwn'),
+                                'Reason'=>(object) array('Text'=>'Unknow problem with the soap response.')
                             );
                         }
                     }catch (\Exception $exception) {
                         $responseXml = NULL;
                         $soapFaultObject = (object) array(
-                            'Code'=>array('Value'=>$exception->getCode()),
-                            'Reason'=>array('Text'=>$exception->getMessage())
+                            'Code'=>(object) array('Value'=>$exception->getCode()),
+                            'Reason'=>(object) array('Text'=>$exception->getMessage())
                         );
                     }
 
