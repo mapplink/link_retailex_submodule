@@ -170,12 +170,12 @@ class ProductGateway extends AbstractGateway
     }
 
     /**
-     * @param $colourId
+     * @param int $colourId
      * @return string|NULL $colourString
      */
     public static function getColour($colourId)
     {
-        return self::getMappedString('colour', $colourId);
+        return self::getMappedString('colour', (int) $colourId);
     }
 
     /**
