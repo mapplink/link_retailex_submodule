@@ -28,11 +28,11 @@ class ProductGateway extends AbstractGateway
     const GATEWAY_ENTITY_CODE = 'p';
 
     /** @var array $this->attributeMap */
-    protected $attributeMap = array(
+    protected $productAttributeMap = array(
         'ProductId'=>array('sku'=>'getSku'),
 //        'SKU'=>NULL,
 //        'Code'=>NULL,
-        'Description'=>'',
+        'Description'=>'description',
 //        'BrandId'=>NULL,
         'SizeId'=>'size',
         'ColourId'=>array('color'=>'getColour'),
@@ -41,10 +41,7 @@ class ProductGateway extends AbstractGateway
 //        'Freight'=>NULL,
 //        'Custom3'=>NULL,
 //        'LastUpdated'=>NULL,
-//        'StockAvailable'=>NULL,
-        'StockOnHand'=>'qty_soh',
-//        'StockOnOrder'=>NULL,
-        'MatrixProduct'=>'',
+//        'MatrixProduct'=>NULL,
 //        'ManageStock'=>NULL,
         'MasterPOSPrice'=>'price',
         'RRP'=>'msrp',
@@ -55,8 +52,21 @@ class ProductGateway extends AbstractGateway
         'Taxable'=>'taxable',
 //        'ChannelId'=>NULL
     );
+    /** @var array $this->attributeMap */
+    protected $stockitemAttributeMap = array(
+        'ProductId'=>array('sku'=>'getSku'),
+//        'SKU'=>NULL,
+//        'LastUpdated'=>NULL,
+//        'StockAvailable'=>NULL,
+        'StockOnHand'=>'qty_soh',
+//        'StockOnOrder'=>NULL,
+//        'ChannelId'=>NULL
+    );
+    /** @var array $this->mappedDataPreset */
+    protected $mappedDataPreset = array('storeId'=>0);
+
     /** @var array $this->staticAttributes */
-    protected $staticAttributes = array('sku', 'storeId');
+    protected $staticAttributes = array('sku'=>NULL, 'storeId'=>NULL);
 
     // ToDo: Move mapping to config
     /** @var array $this->colourIdMap */
@@ -222,80 +232,51 @@ $retrieveProductId = 140268;$timestamp = time() - 1209600;$lastRetrieve = date('
 $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$retrieveProductId, 'ChannelId'=>intval($this->_node->getConfig('retailex-channel')));
                 $soapXml = $this->soap->call($call, $filter);
 
-                $productsData = array();
+                $retailExpressDataById = array();
 //var_dump($soapXml);
                 if ($soapXml) {
                     $products = current($soapXml->xpath('//Products'));
                     foreach ($products->children() as $product) {
                         $productId = (string) $product->ProductId;
-                        $productsData[$productId] = array();
+                        $retailExpressDataById[$productId] = array();
                         foreach ($product as $key=>$value) {
-                            $productsData[$productId][$key] = (string) $value;
+                            $retailExpressDataById[$productId][$key] = (string) $value;
                         }
-//var_dump($productsData[$productId]);die();
+//var_dump($retailExpressDataById[$productId]);die();
                     }
                 }
             }catch (\Exception $exception) {
                 throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
             }
 
-            foreach ($productsData as $productData) {
-                $productId = (int) $productData['ProductId'];
+            foreach ($retailExpressDataById as $retailExpressDataRow) {
+                $productId = (int) $retailExpressDataRow['ProductId'];
                 $parentId = NULL;
-                $localSku = self::getSku($productData['ProductId']);
+                $localSku = self::getSku($retailExpressDataRow['ProductId']);
 
                 $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_DEBUGEXTRA,
                     'rex_psoap_data', 'Loaded product data from Retailex via SOAP api.',
-                    array('local product id'=>$productId, 'local sku'=>$localSku, 'data'=>$productData)
+                    array('local product id'=>$productId, 'local sku'=>$localSku, 'data'=>$retailExpressDataRow)
                 );
 
-                // Preset store (
-                $data = array('storeId'=>0);
-                foreach ($this->attributeMap as $localCode=>$code) {
-                    if (!is_null($code)) {
-                        unset ($error);
-
-                        if (is_string($code)) {
-                            $value = $productData[$localCode];
-                        }elseif (is_array($code) && count($code) == 1) {
-                            $method = current($code);
-                            $code = key($code);
-                            $value = NULL;
-
-                            try{
-                                if (method_exists('Retailex\Gateway\ProductGateway', $method)) {
-                                    $value = self::$method($productData[$localCode]);
-                                }else{
-                                    $error = 'Mapping method '.$method.' is not existing.';
-                                }
-                            }catch (\Exception $exception) {
-                                $error = $exception->getMessage();
-                            }
-                        }
-
-                        if (is_string($code) && isset($value) && !isset($error)) {
-                            $data[$code] = $value;
-                        }else{
-                            if (isset($error)) {
-                                $logMessage = $error;
-                            }else{
-                                $logMessage = $error = 'Unspecified error on product data mapping.';
-                            }
-
-                            $this->getServiceLocator()->get('logService')
-                                ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $logMessage,
-                                    array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'error'=>$error));
-                        }
-                    }
-                }
-
-                foreach ($this->staticAttributes as $code) {
-                    $$code = $data[$code];
-                    unset($data[$code]);
-                }
+                $productData = $this->getMappedData($this->productAttributeMap, $retailExpressDataRow);
+                $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressDataRow);
 
                 try {
-                    $this->processUpdate($productId, $sku, $storeId, $parentId, $data);
+                    $product = $this->processProductUpdate(
+                        $productId,
+                        $this->staticAttributes['sku'],
+                        $this->staticAttributes['storeId'],
+                        $parentId,
+                        $productData
+                    );
+                    $this->processStockUpdate(
+                        $productId,
+                        $this->staticAttributes['sku'],
+                        $this->staticAttributes['storeId'],
+                        $product->getEntityId(),
+                        $productData
+                    );
                 }catch (\Exception $exception) {
                     throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                 }
@@ -311,13 +292,69 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
         $seconds = ceil(time() - $this->getNewRetrieveTimestamp());
         $message = 'Retrieved '.count($products).' products in '.$seconds.'s up to '
             .strftime('%H:%M:%S, %d/%m', $this->retrieveTimestamp).' via '.$api.' api.';
-        $logData = array('type'=>'product', 'amount created/updated'=>count($productsData), 'period [s]'=>$seconds);
-        if (count($productsData) > 0) {
-            $logData['per entity [s]'] = round($seconds / count($productsData), 3);
+        $logData = array('type'=>'product', 'amount created/updated'=>count($retailExpressDataById), 'period [s]'=>$seconds);
+        if (count($retailExpressDataById) > 0) {
+            $logData['per entity [s]'] = round($seconds / count($retailExpressDataById), 3);
         }
         $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_p_re_no', $message, $logData);
     }
 
+    /**
+     * @param array $map
+     * @param array $data
+     * @return array $mappedData
+     */
+    protected function getMappedData(array $map, array $data)
+    {
+        $mappedData = $this->mappedDataPreset;
+
+        foreach ($map as $localCode=>$code) {
+            if (!is_null($code)) {
+                unset ($error);
+
+                if (is_string($code)) {
+                    $value = $data[$localCode];
+                }elseif (is_array($code) && count($code) == 1) {
+                    $method = current($code);
+                    $code = key($code);
+                    $value = NULL;
+
+                    try{
+                        if (method_exists('Retailex\Gateway\ProductGateway', $method)) {
+                            $value = self::$method($data[$localCode]);
+                        }else{
+                            $error = 'Mapping method '.$method.' is not existing.';
+                        }
+                    }catch (\Exception $exception) {
+                        $error = $exception->getMessage();
+                    }
+                }
+
+                if (is_string($code) && isset($value) && !isset($error)) {
+                    $mappedData[$code] = $value;
+                }else{
+                    if (isset($error)) {
+                        $logMessage = $error;
+                    }else{
+                        $logMessage = $error = 'Unspecified error on product data mapping.';
+                    }
+
+                    $this->getServiceLocator()->get('logService')
+                        ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $logMessage,
+                            array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'error'=>$error));
+                }
+            }
+        }
+
+        foreach ($this->staticAttributes as $code=>&$value) {
+            if (is_null($value) && isset($mappedData[$code])) {
+                $value = $mappedData[$code];
+            }
+            unset($mappedData[$code]);
+        }
+
+        return $mappedData;
+    }
     /**
      * @param int $productId
      * @param string $sku
@@ -326,9 +363,8 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
      * @param array $data
      * @return \Entity\Entity|NULL
      */
-    protected function processUpdate($productId, $sku, $storeId, $parentId, array $data)
+    protected function processProductUpdate($productId, $sku, $storeId, $parentId, array $data)
     {
-        /** @var boolean $needsUpdate Whether we need to perform an entity update here */
         $needsUpdate = TRUE;
 
         $existingEntity = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'product', 0, $productId);
@@ -344,8 +380,8 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                     ->log(LogService::LEVEL_INFO,
                         'rex_p_new',
                         'New product '.$sku,
-                       array('sku'=>$sku),
-                       array('node'=>$this->_node, 'entity'=>$existingEntity)
+                        array('sku'=>$sku),
+                        array('node'=>$this->_node, 'entity'=>$existingEntity)
                     );
                 try{
                     $stockEntity = $this->_entityService
@@ -356,8 +392,8 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                         ->log(LogService::LEVEL_WARN,
                             'rex_p_si_ex',
                             'Already existing stockitem for new product '.$sku,
-                           array('sku'=>$sku),
-                           array('node'=>$this->_node, 'entity'=>$existingEntity)
+                            array('sku'=>$sku),
+                            array('node'=>$this->_node, 'entity'=>$existingEntity)
                         );
                 }
                 $needsUpdate = FALSE;
@@ -375,16 +411,16 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                     ->log(LogService::LEVEL_ERROR,
                         'rex_p_relink',
                         'Incorrectly linked product '.$sku.' ('.$noneOrWrongLocalId.'). Re-linked now.',
-                       array('code'=>$sku, 'wrong local id'=>$noneOrWrongLocalId),
-                       array('node'=>$this->_node, 'entity'=>$existingEntity)
+                        array('code'=>$sku, 'wrong local id'=>$noneOrWrongLocalId),
+                        array('node'=>$this->_node, 'entity'=>$existingEntity)
                     );
             }else{
                 $this->getServiceLocator() ->get('logService')
                     ->log(LogService::LEVEL_INFO,
                         'rex_p_link',
                         'Unlinked product '.$sku,
-                       array('sku'=>$sku),
-                       array('node'=>$this->_node, 'entity'=>$existingEntity)
+                        array('sku'=>$sku),
+                        array('node'=>$this->_node, 'entity'=>$existingEntity)
                     );
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
             }
@@ -393,8 +429,8 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                 ->log(LogService::LEVEL_INFO,
                     'rex_p_upd',
                     'Updated product '.$sku,
-                   array('sku'=>$sku),
-                   array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
+                    array('sku'=>$sku),
+                    array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
                 );
         }
 
@@ -406,168 +442,64 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
     }
 
     /**
-     * Load detailed product data from Retailex
-     * @param $productId
-     * @param $storeId
-     * @param \Entity\Service\EntityConfigService $entityConfigService
-     * @return array
-     * @throws \Magelink\Exception\MagelinkException
+     * @param int $productId
+     * @param string $sku
+     * @param int $storeId
+     * @param int $parentId
+     * @param array $data
+     * @return \Entity\Entity|NULL
      */
-    public function loadFullProduct($productId, $storeId, \Entity\Service\EntityConfigService $entityConfigService) {
+    protected function processStockUpdate($productId, $sku, $storeId, $parentId, array $data)
+    {
+        $needsUpdate = TRUE;
 
-        $additional = $this->_node->getConfig('product_attributes');
-        if (is_string($additional)) {
-            $additional = explode(',', $additional);
-        }
-        if (!$additional || !is_array($additional)) {
-            $additional = array();
-        }
+        $existingEntity = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'stockitem', 0, $productId);
+        if (!$existingEntity) {
+            $existingEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', 0, $sku);
+            $noneOrWrongLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
 
-        $data = array(
-            $productId,
-            $storeId,
-            array('additional_attributes'=>$additional),
-            'id',
-        );
+            if (!$existingEntity) {
+                $this->getServiceLocator() ->get('logService')->log(LogService::LEVEL_WARN,
+                    'rex_si_noex',
+                    'Stockitem is not existing.',
+                    array('sku'=>$sku),
+                    array('node'=>$this->_node, 'data'=>$data)
+                );
+                $needsUpdate = FALSE;
+            }elseif ($noneOrWrongLocalId != NULL) {
+                $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
 
-        $productInfo = $this->soap->call('catalogProductInfo', $data);
-
-        if (!$productInfo && !$productInfo['sku']) {
-            // store as sync issue
-            throw new GatewayException('Invalid product info response');
-            $data = NULL;
-        }else{
-            $data = $this->convertFromRetailex($productInfo, $additional);
-
-            foreach ($additional as $attributeCode) {
-                $attributeCode = strtolower(trim($attributeCode));
-
-                if (strlen($attributeCode)) {
-                    if (!array_key_exists($attributeCode, $data)) {
-                        $data[$attributeCode] = NULL;
-                    }
-
-                    if (!$entityConfigService->checkAttribute('product', $attributeCode)) {
-                        $entityConfigService->createAttribute(
-                            $attributeCode,
-                            $attributeCode,
-                            0,
-                            'varchar',
-                            'product',
-                            'Custom Retailex attribute'
-                        );
-
-                        try {
-                            $this->getServiceLocator()->get('nodeService')->subscribeAttribute(
-                                $this->_node->getNodeId(),
-                                $attributeCode,
-                                'product'
-                            );
-                        }catch (\Exception $exception) {
-                            // Store as sync issue
-                            throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
-                            $data = NULL;
-                        }
-                    }
-                }
-            }
-        }
-
-        return $data;
-    }
-
-    /**
-     * Converts Retailex-named attributes into our internal Magelink attributes / formats.
-     * @param array $rawData Input array of Retailex attribute codes
-     * @param array $additional Additional product attributes to load in
-     * @return array
-     */
-    protected function convertFromRetailex($rawData, $additional) {
-        $data = array();
-        if (isset($rawData['type_id'])) {
-            $data['type'] = $rawData['type_id'];
-        }else{
-            if (isset($rawData['type'])) {
-                $data['type'] = $rawData['type'];
+                $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR,
+                    'rex_p_relink',
+                    'Incorrectly linked product '.$sku.' ('.$noneOrWrongLocalId.'). Re-linked now.',
+                    array('code'=>$sku, 'wrong local id'=>$noneOrWrongLocalId),
+                    array('node'=>$this->_node, 'entity'=>$existingEntity)
+                );
             }else{
-                $data['type'] = NULL;
-            }
-        }
-        if (isset($rawData['name'])) {
-            $data['name'] = $rawData['name'];
-        }else{
-            $data['name'] = NULL;
-        }
-        if (isset($rawData['description'])) {
-            $data['description'] = $rawData['description'];
-        }else{
-            $data['description'] = NULL;
-        }
-        if (isset($rawData['short_description'])) {
-            $data['short_description'] = $rawData['short_description'];
-        }else{
-            $data['short_description'] = NULL;
-        }
-        if (isset($rawData['status'])) {
-            $data['enabled'] =($rawData['status'] == 1) ? 1 : 0;
-        }else{
-            $data['enabled'] = 0;
-        }
-        if (isset($rawData['visibility'])) {
-            $data['visible'] =($rawData['visibility'] == 4) ? 1 : 0;
-        }else{
-            $data['visible'] = 0;
-        }
-        if (isset($rawData['price'])) {
-            $data['price'] = $rawData['price'];
-        }else{
-            $data['price'] = NULL;
-        }
-        if (isset($rawData['tax_class_id'])) {
-            $data['taxable'] =($rawData['tax_class_id'] == 2) ? 1 : 0;
-        }else{
-            $data['taxable'] = 0;
-        }
-        if (isset($rawData['special_price'])) {
-            $data['special_price'] = $rawData['special_price'];
-
-            if (isset($rawData['special_from_date'])) {
-                $data['special_from_date'] = $rawData['special_from_date'];
-            }else{
-                $data['special_from_date'] = NULL;
-            }
-            if (isset($rawData['special_to_date'])) {
-                $data['special_to_date'] = $rawData['special_to_date'];
-            }else{
-                $data['special_to_date'] = NULL;
+                $this->getServiceLocator() ->get('logService')->log(LogService::LEVEL_INFO,
+                    'rex_p_link',
+                    'Unlinked product '.$sku,
+                    array('sku'=>$sku),
+                    array('node'=>$this->_node, 'entity'=>$existingEntity)
+                );
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
             }
         }else{
-            $data['special_price'] = NULL;
-            $data['special_from_date'] = NULL;
-            $data['special_to_date'] = NULL;
+            $this->getServiceLocator()->get('logService')
+                ->log(LogService::LEVEL_INFO,
+                    'rex_p_upd',
+                    'Updated product '.$sku,
+                    array('sku'=>$sku),
+                    array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
+                );
         }
 
-        if (isset($rawData['additional_attributes'])) {
-            foreach ($rawData['additional_attributes'] as $pair) {
-                $attributeCode = trim(strtolower($pair['key']));
-                if (!in_array($attributeCode, $additional)) {
-                    throw new GatewayException('Invalid attribute returned by Retailex: '.$attributeCode);
-                }
-                if (isset($pair['value'])) {
-                    $data[$attributeCode] = $pair['value'];
-                }else{
-                    $data[$attributeCode] = NULL;
-                }
-            }
-        }else{
-            foreach ($additional as $code) {
-                if (isset($rawData[$code])) {
-                    $data[$code] = $rawData[$code];
-                }
-            }
+        if ($needsUpdate) {
+            $this->_entityService->updateEntity($this->_node->getNodeId(), $existingEntity, $data, FALSE);
         }
 
-        return $data;
+        return $existingEntity;
     }
 
     /**
