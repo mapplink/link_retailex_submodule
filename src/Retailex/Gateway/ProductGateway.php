@@ -47,7 +47,7 @@ class ProductGateway extends AbstractGateway
         'RRP'=>'msrp',
 //        'DefaultPrice'=>'price',
         'DiscountedPrice'=>'special_price',
-        'CustomerDiscountedPrice'=>'',
+//        'CustomerDiscountedPrice'=>NULL,
 //        'TaxRate'=>FALSE,
         'Taxable'=>'taxable',
 //        'ChannelId'=>NULL
@@ -233,7 +233,6 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                 $soapXml = $this->soap->call($call, $filter);
 
                 $retailExpressDataById = array();
-//var_dump($soapXml);
                 if ($soapXml) {
                     $products = current($soapXml->xpath('//Products'));
                     foreach ($products->children() as $product) {
@@ -242,7 +241,6 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                         foreach ($product as $key=>$value) {
                             $retailExpressDataById[$productId][$key] = (string) $value;
                         }
-//var_dump($retailExpressDataById[$productId]);die();
                     }
                 }
             }catch (\Exception $exception) {
@@ -260,8 +258,6 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                 );
 
                 $productData = $this->getMappedData($this->productAttributeMap, $retailExpressDataRow);
-                $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressDataRow);
-
                 try {
                     $product = $this->processProductUpdate(
                         $productId,
@@ -270,15 +266,23 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                         $parentId,
                         $productData
                     );
+                }catch (\Exception $exception) {
+                    $message = 'Product process error: '.$exception->getMessage();
+                    throw new GatewayException($message, $exception->getCode(), $exception);
+                }
+
+                $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressDataRow);
+                try {
                     $this->processStockUpdate(
                         $productId,
                         $this->staticAttributes['sku'],
                         $this->staticAttributes['storeId'],
                         $product->getEntityId(),
-                        $productData
+                        $stockitemData
                     );
                 }catch (\Exception $exception) {
-                    throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
+                    $message = 'Stockitem process error: '.$exception->getMessage();
+                    throw new GatewayException($message, $exception->getCode(), $exception);
                 }
             }
         }else{
@@ -328,26 +332,22 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                     }catch (\Exception $exception) {
                         $error = $exception->getMessage();
                     }
+                }else{
+                    $error = 'Error on product/stockitem data mapping.';
                 }
 
-                if (is_string($code) && isset($value) && !isset($error)) {
+                if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
                     $mappedData[$code] = $value;
                 }else{
-                    if (isset($error)) {
-                        $logMessage = $error;
-                    }else{
-                        $logMessage = $error = 'Unspecified error on product data mapping.';
-                    }
-
                     $this->getServiceLocator()->get('logService')
-                        ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $logMessage,
-                            array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'error'=>$error));
+                        ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error,
+                            array('local code'=>$localCode, 'code'=>$code, 'value'=>$value));
                 }
             }
         }
 
         foreach ($this->staticAttributes as $code=>&$value) {
-            if (is_null($value) && isset($mappedData[$code])) {
+            if (isset($mappedData[$code])) {
                 $value = $mappedData[$code];
             }
             unset($mappedData[$code]);
