@@ -64,6 +64,10 @@ class ProductGateway extends AbstractGateway
     );
     /** @var array $this->mappedDataPreset */
     protected $mappedDataPreset = array('storeId'=>0);
+    /** @var array $this->mappedCreateProductDataPreset */
+    protected $mappedCreateProductDataPreset = array('enable'=>0);
+    /** @var array $this->mappedUpdateProductDataPreset */
+    protected $mappedUpdateProductDataPreset = array('enable'=>-1);
 
     /** @var array $this->staticAttributes */
     protected $staticAttributes = array('sku'=>NULL, 'storeId'=>NULL);
@@ -373,6 +377,7 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
             $noneOrWrongLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
 
             if (!$existingEntity) {
+                $data = array_replace($this->mappedCreateProductDataPreset, $data);
                 $existingEntity = $this->_entityService
                     ->createEntity($this->_node->getNodeId(), 'product', 0, $sku, $data, $parentId);
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
@@ -435,6 +440,7 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
         }
 
         if ($needsUpdate) {
+            $data = array_replace($this->mappedUpdateProductDataPreset, $data);
             $this->_entityService->updateEntity($this->_node->getNodeId(), $existingEntity, $data, FALSE);
         }
 
