@@ -118,7 +118,7 @@ class Node extends AbstractNode
      */
     public function getConfig($key = NULL)
     {
-        // @todo: Check if === would be more appropriate
+        // TECHNICAL DEBT // ToDo: Check if === would be more appropriate
         if ($key == NULL) {
             return $this->_config;
         }elseif (isset($this->_config[$key])) {

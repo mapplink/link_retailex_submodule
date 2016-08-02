@@ -156,10 +156,6 @@ class Soap extends SoapCurl
             $result = NULL;
         }else{
             $result = $this->_processResponse($result);
-            /* ToDo: Investigate if that could be centralised
-            if (isset($result['result'])) {
-                $result = $result['result'];
-            }*/
 
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_DEBUG, 'rex_soap_success', 'Successfully soap call: '.$call,

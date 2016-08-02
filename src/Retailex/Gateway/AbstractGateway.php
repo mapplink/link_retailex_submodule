@@ -53,7 +53,7 @@ abstract class AbstractGateway extends BaseAbstractGateway
     }
 
     /**
-     * ToDo: Implement this instead of the retrieve functionality on all gateways
+     * TECHNICAL DEBT // ToDo: Implement this instead of the retrieve functionality on all gateways
      * Retrieve and action all updated records (either from polling, pushed data, or other sources).
      * @return array $retrieveResults
      */

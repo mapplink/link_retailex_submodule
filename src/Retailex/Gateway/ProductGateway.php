@@ -72,7 +72,7 @@ class ProductGateway extends AbstractGateway
     /** @var array $this->staticAttributes */
     protected $staticAttributes = array('sku'=>NULL, 'storeId'=>NULL);
 
-    // ToDo: Move mapping to config
+    // TECHNICAL DEBT // ToDo: Move mapping to config
     /** @var array $this->colourIdMap */
     protected static $colourById = array(382=>'10K/Diamond', 383=>'10K/Emerald', 384=>'10K/Ruby', 387=>'10K/Silver/Dia',
         386=>'10K/Silver/Ruby', 479=>'14ct Gold', 385=>'18K', 349=>'9ct Gold', 102=>'Alabaster', 1560=>'Alligator',
@@ -530,7 +530,7 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
             $isCustomAttribute = in_array($code, $customAttributes);
             if ($isCustomAttribute) {
                 if (is_array($data[$code])) {
-                    // TODO(maybe) : Implement
+                    // ToDo(maybe) : Implement
                     throw new GatewayException("This gateway doesn't support multi_data custom attributes yet.");
                     $removeMultiData = FALSE;
                 }else{
@@ -621,12 +621,14 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                         $value = ($value ? $value : NULL);
                     case 'name':
                     case 'description':
+                    case 'msrp':
                     case 'short_description':
                     case 'weight':
                     case 'barcode':
                     case 'bin_location':
-                    case 'msrp':
+                    case 'brand':
                     case 'cost':
+                    case 'size':
                         // Same name in both systems
                         $data[$code] = $value;
                         break;
@@ -639,9 +641,6 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                     case 'visible':
                         $data['visibility'] = ($value == 1 ? 4 : 1);
                         break;
-                    // ToDo (maybe) : Add logic for this custom attributes
-                    case 'brand':
-                    case 'size':
                         // Ignore attributes
                         break;
                     case 'product_class':
