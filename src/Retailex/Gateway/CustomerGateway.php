@@ -67,72 +67,23 @@ class CustomerGateway extends AbstractGateway
         // ToDo: Implement writeUpdates() method.
 
         /** @var \Entity\Service\EntityService $entityService */
-/*        $entityService = $this->getServiceLocator()->get('entityService');
+        $entityService = $this->getServiceLocator()->get('entityService');
 
-        $additionalAttributes = $this->_node->getConfig('customer_attributes');
-        if(is_string($additionalAttributes)){
-            $additionalAttributes = explode(',', $additionalAttributes);
-        }
-        if(!$additionalAttributes || !is_array($additionalAttributes)){
-            $additionalAttributes = array();
-        }
+        foreach ($attributes as $attribute) {
+            $value = $entity->getData($attribute);
 
-        $data = array(
-            'additional_attributes'=>array(
-                'single_data'=>array(),
-                'multi_data'=>array(),
-            ),
-        );
-
-        foreach($attributes as $att){
-            $v = $entity->getData($att);
-            if(in_array($att, $additionalAttributes)){
-                // Custom attribute
-                if(is_array($v)){
-                    // ToDo: implement additional
-                    throw new MagelinkException('This gateway does not yet support multi_data additional attributes');
-                }else{
-                    $data['additional_attributes']['single_data'][] = array(
-                        'key'=>$att,
-                        'value'=>$v,
-                    );
-                }
-                continue;
-            }
             // Normal attribute
-            switch($att){
-                case 'name':
-                case 'description':
-                case 'short_description':
-                case 'price':
-                case 'special_price':
+            switch($attribute){
+                case 'first_name':
+                case 'middle_name':
+                case 'last_name':
+                case 'date_of_birth':
+                case 'enable_newsletter':
                     // Same name in both systems
-                    $data[$att] = $v;
+                    $data[$attribute] = $value;
                     break;
-                case 'special_from':
-                    $data['special_from_date'] = $v;
-                    break;
-                case 'special_to':
-                    $data['special_to_date'] = $v;
-                    break;
-                case 'customer_class':
-                    if($type != \Entity\Update::TYPE_CREATE){
-                        // ToDo: log error (but no exception)
-                    }
-                    break;
-                case 'type':
-                    if($type != \Entity\Update::TYPE_CREATE){
-                        // ToDo: log error (but no exception)
-                    }
-                    break;
-                case 'enabled':
-                    $data['status'] = ($v == 1 ? 2 : 1);
-                    break;
-                case 'visible':
-                    $data['status'] = ($v == 1 ? 4 : 1);
-                    break;
-                case 'taxable':
-                    $data['status'] = ($v == 1 ? 2 : 1);
+                case 'newslettersubscription':
+                    // Ignore these attributes
                     break;
                 default:
                     // Warn unsupported attribute
@@ -150,16 +101,16 @@ class CustomerGateway extends AbstractGateway
             $this->soap->call('catalogCustomerUpdate', $req);
         }else if($type == \Entity\Update::TYPE_CREATE){
 
-            $attSet = NULL;
+            $attributeSet = NULL;
             foreach($this->_attSets as $setId=>$set){
                 if($set['name'] == $entity->getData('customer_class', 'default')){
-                    $attSet = $setId;
+                    $attributeSet = $setId;
                     break;
                 }
             }
             $req = array(
                 $entity->getData('type'),
-                $attSet,
+                $attributeSet,
                 $entity->getUniqueId(),
                 $data,
                 $entity->getStoreId()
@@ -170,7 +121,6 @@ class CustomerGateway extends AbstractGateway
             }
             $entityService->linkEntity($this->_node->getNodeId(), $entity, $res);
         }
-*/
     }
 
     /**
