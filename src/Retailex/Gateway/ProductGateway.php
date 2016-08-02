@@ -65,9 +65,9 @@ class ProductGateway extends AbstractGateway
     /** @var array $this->mappedDataPreset */
     protected $mappedDataPreset = array('storeId'=>0);
     /** @var array $this->mappedCreateProductDataPreset */
-    protected $mappedCreateProductDataPreset = array('enable'=>0);
+    protected $mappedCreateProductDataPreset = array('enabled'=>0);
     /** @var array $this->mappedUpdateProductDataPreset */
-    protected $mappedUpdateProductDataPreset = array('enable'=>-1);
+    protected $mappedUpdateProductDataPreset = array('enabled'=>-1);
 
     /** @var array $this->staticAttributes */
     protected $staticAttributes = array('sku'=>NULL, 'storeId'=>NULL);
