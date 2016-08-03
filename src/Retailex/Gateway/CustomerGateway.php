@@ -69,6 +69,7 @@ class CustomerGateway extends AbstractGateway
         /** @var \Entity\Service\EntityService $entityService */
         $entityService = $this->getServiceLocator()->get('entityService');
 
+        $data = array('password'=>'5.#^RXPb[-Q_c{Z@');
         foreach ($attributes as $attribute) {
             $value = $entity->getData($attribute);
 
