@@ -59,7 +59,17 @@ class CustomerGateway extends AbstractGateway
      */
     private function getRandomPassword()
     {
-        return "5.#'RXPb[-Q_c{Z@";
+        $password = '';
+        for ($c = 0; $c < 16; $c++)
+        {
+            do {
+                $ascii = rand(45, 122);
+            }while ($ascii > 45 && $ascii < 48 || $ascii > 57 && $ascii < 65 || $ascii > 90 && $ascii < 97);
+
+            $password .= chr($ascii);
+        }
+
+        return $password;
     }
 
     /**
