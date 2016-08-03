@@ -10,10 +10,10 @@
 
 namespace Retailex\Gateway;
 
+use Entity\Entity;
 use Entity\Service\EntityService;
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
-use Magelink\Exception\NodeException;
 use Magelink\Exception\GatewayException;
 
 
@@ -22,6 +22,7 @@ class CustomerGateway extends AbstractGateway
 
     const GATEWAY_ENTITY = 'customer';
     const GATEWAY_ENTITY_CODE = 'cu';
+    const ATTRIBUTE_NOT_DEFINED = '> Information missing <';
 
     /**
      * Initialize the gateway and perform any setup actions required.
@@ -54,35 +55,85 @@ class CustomerGateway extends AbstractGateway
     }
 
     /**
+     * @return string $randomPassword
+     */
+    private function getRandomPassword()
+    {
+        return "5.#'RXPb[-Q_c{Z@";
+    }
+
+    /**
      * Write out all the updates to the given entity.
-     * @param \Entity\Entity $entity
+     * @param Entity $entity
      * @param \Entity\Attribute[] $attributes
      * @param int $type
      * @return bool
      */
-    public function writeUpdates(\Entity\Entity $entity, $attributes, $type = \Entity\Update::TYPE_UPDATE)
+    public function writeUpdates(Entity $entity, $attributes, $type = \Entity\Update::TYPE_UPDATE)
     {
         return FALSE;
 
         // ToDo: Implement writeUpdates() method.
 
-        /** @var \Entity\Service\EntityService $entityService */
+        /** @var EntityService $entityService */
         $entityService = $this->getServiceLocator()->get('entityService');
 
-        $data = array('password'=>'5.#^RXPb[-Q_c{Z@');
+        $data = array(
+            'Password'=>$this->getRandomPassword(),
+            'BillEmail'=>$entity->getUniqueId(),
+            'DelAddress'=>self::ATTRIBUTE_NOT_DEFINED,
+            'DelPostCode'=>self::ATTRIBUTE_NOT_DEFINED,
+            'DelSuburb'=>self::ATTRIBUTE_NOT_DEFINED,
+            'DelState'=>self::ATTRIBUTE_NOT_DEFINED,
+            'ReceivesNews'=>0
+        );
+
+        $billingAddress = $entity->resolve('billing_address', 'address');
+        $shippingAddress = $entity->resolve('shipping_address', 'address');
+
+        if (is_null($billingAddress) && !is_null($shippingAddress)) {
+            $billingAddress = $shippingAddress;
+        }elseif (!is_null($billingAddress) && is_null($shippingAddress)) {
+            $shippingAddress = $billingAddress;
+        }
+
+        if (!is_null($billingAddress)) {
+            $data['BillFirstName'] = $billingAddress->getData('first_name', NULL);
+            $data['BillLastName'] = $billingAddress->getData('last_name', NULL);
+        }
+        if (!is_null($shippingAddress)) {
+            $addressArray = explode(chr(10), $shippingAddress->getData('street', self::ATTRIBUTE_NOT_DEFINED));
+            if (count($addressArray) == 1) {
+                $data['DelAddress'] = array_shift($addressArray);
+            }elseif (count($addressArray) > 1) {
+                $data['DelSuburb'] = array_pop($addressArray);
+                $data['DelAddress'] = implode(chr(10), $addressArray);
+            }
+
+            $data['DelPostCode'] = $shippingAddress->getData('postcode', self::ATTRIBUTE_NOT_DEFINED);
+            $data['DelState'] = $shippingAddress->getData('region', self::ATTRIBUTE_NOT_DEFINED);
+        }
+
         foreach ($attributes as $attribute) {
             $value = $entity->getData($attribute);
 
             // Normal attribute
-            switch($attribute){
-                case 'first_name':
-                case 'middle_name':
-                case 'last_name':
-                case 'date_of_birth':
+            switch ($attribute) {
                 case 'enable_newsletter':
-                    // Same name in both systems
-                    $data[$attribute] = $value;
+                    $data['ReceivesNews'] = ($value == 1 ? 1 : 0);
                     break;
+                case 'first_name':
+                    if (!isset($data['BillFirstName'])) {
+                        $data['BillFirstName'] = $value;
+                    }
+                    break;
+                case 'last_name':
+                    if (!isset($data['BillLastName'])) {
+                        $data['BillLastName'] = $value;
+                    }
+                    break;
+                case 'middle_name':
+                case 'date_of_birth':
                 case 'newslettersubscription':
                     // Ignore these attributes
                     break;
