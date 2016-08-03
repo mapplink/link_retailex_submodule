@@ -24,6 +24,25 @@ class CustomerGateway extends AbstractGateway
     const GATEWAY_ENTITY_CODE = 'cu';
     const ATTRIBUTE_NOT_DEFINED = '> Information missing <';
 
+    /** @var array $this->billingAttributeMapping */
+    protected $billingAttributeMapping = array(
+        'BillFirstName'=>'first_name',
+        'BillLastName'=>'last_name',
+        'BillCompany'=>'company',
+        'BillPhone'=>'telephone',
+        'BillPostCode'=>'postcode',
+        'BillState'=>'region',
+        'BillCountry'=>'country_code'
+    );
+    /** @var array $this->shippingAttributeMapping */
+    protected $shippingAttributeMapping = array(
+        'DelCompany'=>'company',
+        'DelPhone'=>'telephone',
+        'DelPostCode'=>'postcode',
+        'DelState'=>'region',
+        'DelCountry'=>'country_code'
+    );
+
     /**
      * Initialize the gateway and perform any setup actions required.
      * @param string $entityType
@@ -108,22 +127,34 @@ class CustomerGateway extends AbstractGateway
         }
 
         if (!is_null($billingAddress)) {
-            $data['BillFirstName'] = $billingAddress->getData('first_name', NULL);
-            $data['BillLastName'] = $billingAddress->getData('last_name', NULL);
+            $street = $billingAddress->getStreet();
+            $data['BillAddress'] = $street;
+//            $data['BillAddress2'] = $street;
+            $data['BillSuburb'] = $billingAddress->getSuburb();
+
+            foreach ($this->billingAttributeMapping as $localCode=>$code) {
+                $data[$localCode] = $billingAddress->getData($code, null);
+            }
         }
         if (!is_null($shippingAddress)) {
-            $addressArray = explode(chr(10), $shippingAddress->getData('street', self::ATTRIBUTE_NOT_DEFINED));
-            if (count($addressArray) == 1) {
-                $data['DelAddress'] = array_shift($addressArray);
-            }elseif (count($addressArray) > 1) {
-                $data['DelSuburb'] = array_pop($addressArray);
-                $data['DelAddress'] = implode(chr(10), $addressArray);
-            }
+            $name = trim(str_replace('  ', ' ',
+                $shippingAddress->getData('first_name', '')
+                .' '.$shippingAddress->getData('middle_name', '')
+                .' '.$shippingAddress->getData('last_name', '')
+            ));
+            $data['DelName'] = (strlen($name) == 0 ? NULL : $name);
 
-            $data['DelPostCode'] = $shippingAddress->getData('postcode', self::ATTRIBUTE_NOT_DEFINED);
-            $data['DelState'] = $shippingAddress->getData('region', self::ATTRIBUTE_NOT_DEFINED);
+            $street = $shippingAddress->getStreet();
+            $data['DelAddress'] = $street;
+//            $data['DelAddress2'] = $street;
+            $data['DelSuburb'] = $shippingAddress->getSuburb();
+
+            foreach ($this->shippingAttributeMapping as $localCode=>$code) {
+                $data[$localCode] = $shippingAddress->getData($code, null);
+            }
         }
 
+        $deliveryName = '';
         foreach ($attributes as $attribute) {
             $value = $entity->getData($attribute);
 
@@ -136,13 +167,23 @@ class CustomerGateway extends AbstractGateway
                     if (!isset($data['BillFirstName'])) {
                         $data['BillFirstName'] = $value;
                     }
+                    if (!isset($data['DelName'])) {
+                        $deliveryName = trim($value.' '.$deliveryName);
+                    }
+                    break;
+                case 'middle_name':
+                    if (!isset($data['DelName'])) {
+                        $deliveryName = trim($deliveryName.' '.$value);
+                    }
                     break;
                 case 'last_name':
                     if (!isset($data['BillLastName'])) {
                         $data['BillLastName'] = $value;
                     }
+                    if (!isset($data['DelName'])) {
+                        $data['DelName'] = trim($deliveryName.' '.$value);
+                    }
                     break;
-                case 'middle_name':
                 case 'date_of_birth':
                 case 'newslettersubscription':
                     // Ignore these attributes
@@ -153,7 +194,7 @@ class CustomerGateway extends AbstractGateway
             }
         }
 
-        if($type == \Entity\Update::TYPE_UPDATE){
+        if ($type == \Entity\Update::TYPE_UPDATE) {
             $req = array(
                 $entity->getUniqueId(),
                 $data,
