@@ -27,7 +27,7 @@ class ProductGateway extends AbstractGateway
     const GATEWAY_ENTITY = 'product';
     const GATEWAY_ENTITY_CODE = 'p';
 
-    /** @var array $this->attributeMap */
+    /** @var array $this->productAttributeMap */
     protected $productAttributeMap = array(
         'ProductId'=>array('sku'=>'getSku'),
 //        'SKU'=>NULL,
@@ -52,7 +52,7 @@ class ProductGateway extends AbstractGateway
         'Taxable'=>'taxable',
 //        'ChannelId'=>NULL
     );
-    /** @var array $this->attributeMap */
+    /** @var array $this->stockitemAttributeMap */
     protected $stockitemAttributeMap = array(
         'ProductId'=>array('sku'=>'getSku'),
 //        'SKU'=>NULL,
@@ -276,6 +276,7 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                 }
 
                 $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressDataRow);
+
                 try {
                     $this->processStockUpdate(
                         $productId,
