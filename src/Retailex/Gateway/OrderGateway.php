@@ -28,6 +28,16 @@ class OrderGateway extends AbstractGateway
     const GATEWAY_ENTITY = 'order';
     const GATEWAY_ENTITY_CODE = 'o';
 
+    /** @var array $this->billingAttributeMapping */
+    protected $attributeMapping = array(
+//        'ExternalOrderId'=>'UNIQUE_ID',
+        'DateCreated'=>'last_name',
+        'BillCompany'=>'company',
+        'BillPhone'=>'telephone',
+        'BillPostCode'=>'postcode',
+        'BillState'=>'region',
+        'BillCountry'=>'country_code'
+    );
 
     /**
      * Initialize the gateway and perform any setup actions required.
