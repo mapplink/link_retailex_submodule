@@ -52,6 +52,8 @@ class ProductGateway extends AbstractGateway
         'Taxable'=>'taxable',
 //        'ChannelId'=>NULL
     );
+    /** @var array $this->configurableAttributesToRemove */
+    protected $configurableAttributesToRemove = array('SizeId', 'ColourId');
     /** @var array $this->stockitemAttributeMap */
     protected $stockitemAttributeMap = array(
         'ProductId'=>array('sku'=>'getSku'),
@@ -63,7 +65,7 @@ class ProductGateway extends AbstractGateway
 //        'ChannelId'=>NULL
     );
     /** @var array $this->mappedDataPreset */
-    protected $mappedDataPreset = array('storeId'=>0);
+    protected $mappedDataPreset = array('storeId'=>0, 'type'=>'simple');
     /** @var array $this->mappedCreateProductDataPreset */
     protected $mappedCreateProductDataPreset = array('enabled'=>0);
     /** @var array $this->mappedUpdateProductDataPreset */
@@ -235,59 +237,86 @@ $retrieveProductId = 140268;$timestamp = time() - 1209600;$lastRetrieve = date('
                 $call = 'ProductsGetBulkDetailsByChannel';
 $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$retrieveProductId, 'ChannelId'=>intval($this->_node->getConfig('retailex-channel')));
                 $soapXml = $this->soap->call($call, $filter);
-
-                $retailExpressDataById = array();
-                if ($soapXml) {
-                    $products = current($soapXml->xpath('//Products'));
-                    foreach ($products->children() as $product) {
-                        $productId = (string) $product->ProductId;
-                        $retailExpressDataById[$productId] = array();
-                        foreach ($product as $key=>$value) {
-                            $retailExpressDataById[$productId][$key] = (string) $value;
-                        }
-                    }
-                }
+                $retailExpressDataById = $this->getProductsData($soapXml);
             }catch (\Exception $exception) {
                 throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
             }
 
             foreach ($retailExpressDataById as $retailExpressDataRow) {
-                $productId = (int) $retailExpressDataRow['ProductId'];
-                $parentId = NULL;
-                $localSku = self::getSku($retailExpressDataRow['ProductId']);
+                $createConfigurable = isset($retailExpressDataRow['MatrixProduct'])
+                    && $retailExpressDataRow['MatrixProduct'] != 0;
 
-                $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_DEBUGEXTRA,
-                    'rex_psoap_data', 'Loaded product data from Retailex via SOAP api.',
-                    array('local product id'=>$productId, 'local sku'=>$localSku, 'data'=>$retailExpressDataRow)
-                );
+                if ($createConfigurable) {
+                    try{
+                        $call = 'ProductGetDetailsStockPricingByChannel';
+                        $filter = array(
+                            'ProductId'=>$retailExpressDataRow['ProductId'],
+                            'ChannelId'=>intval($this->_node->getConfig('retailex-channel'))
+                        );
+                        $soapXml = $this->soap->call($call, $filter);
+                        $associatedProducts = $this->getProductsData($soapXml);
+                    }catch(\Exception $exception){
+                        throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
+                    }
 
-                $productData = $this->getMappedData($this->productAttributeMap, $retailExpressDataRow);
-                try {
-                    $product = $this->processProductUpdate(
-                        $productId,
-                        $this->staticAttributes['sku'],
-                        $this->staticAttributes['storeId'],
-                        $parentId,
-                        $productData
-                    );
-                }catch (\Exception $exception) {
-                    $message = 'Product process error: '.$exception->getMessage();
-                    throw new GatewayException($message, $exception->getCode(), $exception);
+                    $configurableProduct = $retailExpressDataRow;
+                    $configurableProduct['configurable'] = TRUE;
+
+                    $retailExpressProductsData = array_merge($associatedProducts, array($configurableProduct));
+                }else{
+                    $retailExpressProductsData = array($retailExpressDataRow);
                 }
 
-                $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressDataRow);
+                foreach ($retailExpressProductsData as $retailExpressProductData) {
+                    $productId = (int) $retailExpressProductData['ProductId'];
+                    $parentId = NULL;
+                    if (isset($retailExpressProductData['configurable']) && $retailExpressProductData['configurable']) {
+                        $localSku = self::getSku($retailExpressProductData['SKU']);
+                    }else{
+                        $localSku = self::getSku($retailExpressProductData['ProductId']);
+                    }
 
-                try {
-                    $this->processStockUpdate(
-                        $productId,
-                        $this->staticAttributes['sku'],
-                        $this->staticAttributes['storeId'],
-                        $product->getEntityId(),
-                        $stockitemData
+                    $this->getServiceLocator()->get('logService')->log(
+                        LogService::LEVEL_DEBUGEXTRA,
+                        'rex_psoap_data',
+                        'Loaded product data from Retailex via SOAP api.',
+                        array(
+                            'local product id'=>$productId,
+                            'local sku'=>$localSku,
+                            'data'=>$retailExpressProductData
+                        )
                     );
-                }catch (\Exception $exception) {
-                    $message = 'Stockitem process error: '.$exception->getMessage();
-                    throw new GatewayException($message, $exception->getCode(), $exception);
+
+                    $productData = $this->getMappedData($this->productAttributeMap, $retailExpressProductData);
+                    try{
+                        $product = $this->processProductUpdate(
+                            $productId,
+                            $this->staticAttributes['sku'],
+                            $this->staticAttributes['storeId'],
+                            $parentId,
+                            $productData
+                        );
+                    }catch(\Exception $exception){
+                        $message = 'Product process error: '.$exception->getMessage();
+                        throw new GatewayException($message, $exception->getCode(), $exception);
+                    }
+
+                    try {
+                        $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressProductData);
+// TECHNICAL DEBT // ToDo: Fix copy transform and remove this
+                        $stockitemData['available'] = $stockitemData['qty_soh'];
+
+                        $this->processStockUpdate(
+                            $productId,
+                            $this->staticAttributes['sku'],
+                            $this->staticAttributes['storeId'],
+                            $product->getEntityId(),
+                            $stockitemData
+                        );
+                    }catch(\Exception $exception){
+                        $message = 'Stockitem process error: '.$exception->getMessage();
+                        throw new GatewayException($message, $exception->getCode(), $exception);
+                    }
                 }
             }
         }else{
@@ -309,6 +338,28 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
     }
 
     /**
+     * @param string $soapXml
+     * @return array $retailExpressDataById
+     */
+    protected function getProductsData($soapXml)
+    {
+        $retailExpressDataById = array();
+
+        if ($soapXml) {
+            $products = current($soapXml->xpath('//Products'));
+            foreach ($products->children() as $product) {
+                $productId = (string) $product->ProductId;
+                $retailExpressDataById[$productId] = array();
+                foreach ($product as $key => $value) {
+                    $retailExpressDataById[$productId][$key] = (string) $value;
+                }
+            }
+        }
+
+        return $retailExpressDataById;
+    }
+
+/**
      * @param array $map
      * @param array $data
      * @return array $mappedData
@@ -321,32 +372,35 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
             if (!is_null($code)) {
                 unset ($error);
 
-                if (is_string($code)) {
-                    $value = $data[$localCode];
-                }elseif (is_array($code) && count($code) == 1) {
-                    $method = current($code);
-                    $code = key($code);
-                    $value = NULL;
+                $isConfigurable = isset($data['configurable']) && $data['configurable'];
+                if (!($isConfigurable && in_array($localCode, $this->configurableAttributesToRemove))) {
+                    if (is_string($code)) {
+                        $value = $data[$localCode];
+                    }elseif (is_array($code) && count($code) == 1) {
+                        $method = current($code);
+                        $code = key($code);
+                        $value = NULL;
 
-                    try{
-                        if (method_exists('Retailex\Gateway\ProductGateway', $method)) {
-                            $value = self::$method($data[$localCode]);
-                        }else{
-                            $error = 'Mapping method '.$method.' is not existing.';
+                        try{
+                            if (method_exists('Retailex\Gateway\ProductGateway', $method)) {
+                                $value = self::$method($data[$localCode]);
+                            }else{
+                                $error = 'Mapping method '.$method.' is not existing.';
+                            }
+                        }catch (\Exception $exception) {
+                            $error = $exception->getMessage();
                         }
-                    }catch (\Exception $exception) {
-                        $error = $exception->getMessage();
+                    }else{
+                        $error = 'Error on product/stockitem data mapping.';
                     }
-                }else{
-                    $error = 'Error on product/stockitem data mapping.';
-                }
 
-                if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
-                    $mappedData[$code] = $value;
-                }else{
-                    $this->getServiceLocator()->get('logService')
-                        ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error,
-                            array('local code'=>$localCode, 'code'=>$code, 'value'=>$value));
+                    if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
+                        $mappedData[$code] = $value;
+                    }else{
+                        $this->getServiceLocator()->get('logService')
+                            ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error,
+                                array('local code'=>$localCode, 'code'=>$code, 'value'=>$value));
+                    }
                 }
             }
         }
