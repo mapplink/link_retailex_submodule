@@ -269,7 +269,7 @@ class ProductGateway extends AbstractGateway
 
                     $configurableProduct = array_replace_recursive(
                         $retailExpressDataRow,
-                        $retailExpressData[$retailExpressDataRow['ProductId']]
+                        $retailExpressData[self::getSku($associatedProduct['ProductId'])]
                     );
                     $configurableProduct['StockOnHand'] = $stockOnHand;
                     $configurableProduct['configurable'] = TRUE;
@@ -381,11 +381,12 @@ var_dump($productId);var_dump($sku);
 
         foreach ($map as $localCode=>$code) {
             if (!is_null($code)) {
-                unset ($error);
+                $error = NULL;
 
                 $isConfigurable = isset($data['configurable']) && $data['configurable'];
                 if (!($isConfigurable && in_array($localCode, $this->configurableAttributesToRemove))) {
-                    if (is_string($code) || is_array($code) && count($code) > 1) {
+                    if ((is_string($code) || is_array($code) && count($code) > 1)
+                      && array_key_exists($localCode, $data)) {
                         $value = $data[$localCode];
                     }elseif (is_array($code) && count($code) == 1) {
                         $method = current($code);
@@ -414,7 +415,7 @@ var_dump($productId);var_dump($sku);
                     }else{
                         $this->getServiceLocator()->get('logService')
                             ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error,
-                                array('local code'=>$localCode, 'code'=>$code, 'value'=>$value));
+                                array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'data'=>$data));
                     }
                 }
             }
