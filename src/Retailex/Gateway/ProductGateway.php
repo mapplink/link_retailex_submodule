@@ -317,8 +317,6 @@ class ProductGateway extends AbstractGateway
 var_dump($productId);var_dump($sku);
                 try {
                     $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressProductData);
-// TECHNICAL DEBT // ToDo: Fix copy transform and remove this
-                    $stockitemData['available'] = $stockitemData['qty_soh'];
 
                     $this->processStockUpdate(
                         $productId,
