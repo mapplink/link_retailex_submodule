@@ -29,10 +29,10 @@ class ProductGateway extends AbstractGateway
 
     /** @var array $this->productAttributeMap */
     protected $productAttributeMap = array(
-        'ProductId'=>array('sku'=>'getSku'),
+//        'ProductId'=>array('sku'=>'getSku'),
 //        'SKU'=>NULL,
 //        'Code'=>NULL,
-        'Description'=>'description',
+        'Description'=>array('name', 'description'),
 //        'BrandId'=>NULL,
         'SizeId'=>'size',
         'ColourId'=>array('color'=>'getColour'),
@@ -56,7 +56,7 @@ class ProductGateway extends AbstractGateway
     protected $configurableAttributesToRemove = array('SizeId', 'ColourId');
     /** @var array $this->stockitemAttributeMap */
     protected $stockitemAttributeMap = array(
-        'ProductId'=>array('sku'=>'getSku'),
+//        'ProductId'=>array('sku'=>'getSku'),
 //        'SKU'=>NULL,
 //        'LastUpdated'=>NULL,
 //        'StockAvailable'=>NULL,
@@ -65,14 +65,14 @@ class ProductGateway extends AbstractGateway
 //        'ChannelId'=>NULL
     );
     /** @var array $this->mappedDataPreset */
-    protected $mappedDataPreset = array('storeId'=>0, 'type'=>'simple');
+    protected $mappedDataPreset = array('storeId'=>0);
     /** @var array $this->mappedCreateProductDataPreset */
-    protected $mappedCreateProductDataPreset = array('enabled'=>0);
+    protected $mappedCreateProductDataPreset = array('enabled'=>1, 'type'=>'simple');
     /** @var array $this->mappedUpdateProductDataPreset */
     protected $mappedUpdateProductDataPreset = array('enabled'=>-1);
 
     /** @var array $this->staticAttributes */
-    protected $staticAttributes = array('sku'=>NULL, 'storeId'=>NULL);
+    protected $staticAttributes = array('storeId'=>NULL);
 
     // TECHNICAL DEBT // ToDo: Move mapping to config
     /** @var array $this->colourIdMap */
@@ -225,7 +225,7 @@ class ProductGateway extends AbstractGateway
                array('type'=>'product', 'datetime'=>$lastRetrieve)
             );
 
-$retrieveProductId = 140268;$timestamp = time() - 1209600;$lastRetrieve = date('Y-m-d', $timestamp).'T'.date('H:i:s', $timestamp).'Z';$lastRetrieve=date('c', $timestamp);
+//$retrieveProductId = 140268;$timestamp = time() - 1209600;$lastRetrieve = date('Y-m-d', $timestamp).'T'.date('H:i:s', $timestamp).'Z';$lastRetrieve=date('c', $timestamp);
         if ($this->soap) {
             $api = $this->soap->getApiType();
             $filter = array(
@@ -235,88 +235,101 @@ $retrieveProductId = 140268;$timestamp = time() - 1209600;$lastRetrieve = date('
 
             try{
                 $call = 'ProductsGetBulkDetailsByChannel';
-$call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$retrieveProductId, 'ChannelId'=>intval($this->_node->getConfig('retailex-channel')));
+//$call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$retrieveProductId, 'ChannelId'=>intval($this->_node->getConfig('retailex-channel')));
                 $soapXml = $this->soap->call($call, $filter);
                 $retailExpressDataById = $this->getProductsData($soapXml);
             }catch (\Exception $exception) {
                 throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
             }
 
+            $retailExpressData = array();
+
             foreach ($retailExpressDataById as $retailExpressDataRow) {
+                try{
+                    $call = 'ProductGetDetailsStockPricingByChannel';
+                    $filter = array(
+                        'ProductId'=>$retailExpressDataRow['ProductId'],
+                        'ChannelId'=>intval($this->_node->getConfig('retailex-channel'))
+                    );
+                    $soapXml = $this->soap->call($call, $filter);
+                    $products = $this->getProductsData($soapXml);
+                }catch(\Exception $exception){
+                    throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
+                }
+
                 $createConfigurable = isset($retailExpressDataRow['MatrixProduct'])
                     && $retailExpressDataRow['MatrixProduct'] != 0;
 
                 if ($createConfigurable) {
-                    try{
-                        $call = 'ProductGetDetailsStockPricingByChannel';
-                        $filter = array(
-                            'ProductId'=>$retailExpressDataRow['ProductId'],
-                            'ChannelId'=>intval($this->_node->getConfig('retailex-channel'))
-                        );
-                        $soapXml = $this->soap->call($call, $filter);
-                        $associatedProducts = $this->getProductsData($soapXml);
-                    }catch(\Exception $exception){
-                        throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
+                    $stockOnHand = 0;
+                    foreach ($products as $associatedProduct) {
+                        $retailExpressData[self::getSku($associatedProduct['ProductId'])] = $associatedProduct;
+                        $stockOnHand += $associatedProduct['StockOnHand'];
                     }
 
-                    $configurableProduct = $retailExpressDataRow;
-                    $configurableProduct['configurable'] = TRUE;
-
-                    $retailExpressProductsData = array_merge($associatedProducts, array($configurableProduct));
-                }else{
-                    $retailExpressProductsData = array($retailExpressDataRow);
-                }
-
-                foreach ($retailExpressProductsData as $retailExpressProductData) {
-                    $productId = (int) $retailExpressProductData['ProductId'];
-                    $parentId = NULL;
-                    if (isset($retailExpressProductData['configurable']) && $retailExpressProductData['configurable']) {
-                        $localSku = self::getSku($retailExpressProductData['SKU']);
-                    }else{
-                        $localSku = self::getSku($retailExpressProductData['ProductId']);
-                    }
-
-                    $this->getServiceLocator()->get('logService')->log(
-                        LogService::LEVEL_DEBUGEXTRA,
-                        'rex_psoap_data',
-                        'Loaded product data from Retailex via SOAP api.',
-                        array(
-                            'local product id'=>$productId,
-                            'local sku'=>$localSku,
-                            'data'=>$retailExpressProductData
-                        )
+                    $configurableProduct = array_replace_recursive(
+                        $retailExpressDataRow,
+                        $retailExpressData[$retailExpressDataRow['ProductId']]
                     );
+                    $configurableProduct['StockOnHand'] = $stockOnHand;
+                    $configurableProduct['configurable'] = TRUE;
+                    $retailExpressData[self::getSku($retailExpressDataRow['Code'])] = $configurableProduct;
 
-                    $productData = $this->getMappedData($this->productAttributeMap, $retailExpressProductData);
-                    try{
-                        $product = $this->processProductUpdate(
-                            $productId,
-                            $this->staticAttributes['sku'],
-                            $this->staticAttributes['storeId'],
-                            $parentId,
-                            $productData
-                        );
-                    }catch(\Exception $exception){
-                        $message = 'Product process error: '.$exception->getMessage();
-                        throw new GatewayException($message, $exception->getCode(), $exception);
+                }elseif (!array_key_exists(self::getSku($retailExpressDataRow['ProductId']), $retailExpressData)) {
+                    foreach ($products as $product) {
+                        if ($product['ProductId'] == $retailExpressDataRow['ProductId']) {
+                            $retailExpressDataRow = array_replace_recursive($retailExpressDataRow, $product);
+                            break;
+                        }
                     }
+                    $retailExpressData[self::getSku($retailExpressDataRow['ProductId'])] = $retailExpressDataRow;
+                }
+            }
 
-                    try {
-                        $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressProductData);
+            foreach ($retailExpressData as $sku=>$retailExpressProductData) {
+                $productId = (int) $retailExpressProductData['ProductId'];
+                $parentId = NULL;
+
+                $this->getServiceLocator()->get('logService')->log(
+                    LogService::LEVEL_DEBUGEXTRA,
+                    'rex_psoap_data',
+                    'Loaded product data from Retailex via SOAP api.',
+                    array(
+                        'local product id'=>$productId,
+                        'sku'=>$sku,
+                        'data'=>$retailExpressProductData
+                    )
+                );
+
+                $productData = $this->getMappedData($this->productAttributeMap, $retailExpressProductData);
+                try{
+                    $product = $this->processProductUpdate(
+                        $productId,
+                        $sku,
+                        $this->staticAttributes['storeId'],
+                        $parentId,
+                        $productData
+                    );
+                }catch(\Exception $exception){
+                    $message = 'Product process error: '.$exception->getMessage();
+                    throw new GatewayException($message, $exception->getCode(), $exception);
+                }
+var_dump($productId);var_dump($sku);
+                try {
+                    $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressProductData);
 // TECHNICAL DEBT // ToDo: Fix copy transform and remove this
-                        $stockitemData['available'] = $stockitemData['qty_soh'];
+                    $stockitemData['available'] = $stockitemData['qty_soh'];
 
-                        $this->processStockUpdate(
-                            $productId,
-                            $this->staticAttributes['sku'],
-                            $this->staticAttributes['storeId'],
-                            $product->getEntityId(),
-                            $stockitemData
-                        );
-                    }catch(\Exception $exception){
-                        $message = 'Stockitem process error: '.$exception->getMessage();
-                        throw new GatewayException($message, $exception->getCode(), $exception);
-                    }
+                    $this->processStockUpdate(
+                        $productId,
+                        $sku,
+                        $this->staticAttributes['storeId'],
+                        $product->getEntityId(),
+                        $stockitemData
+                    );
+                }catch(\Exception $exception){
+                    $message = 'Stockitem process error: '.$exception->getMessage();
+                    throw new GatewayException($message, $exception->getCode(), $exception);
                 }
             }
         }else{
@@ -328,11 +341,11 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
             ->setTimestamp($this->_nodeEntity->getNodeId(), 'product', 'retrieve', $this->getNewRetrieveTimestamp());
 
         $seconds = ceil(time() - $this->getNewRetrieveTimestamp());
-        $message = 'Retrieved '.count($products).' products in '.$seconds.'s up to '
+        $message = 'Retrieved '.count($retailExpressDataById).' products in '.$seconds.'s up to '
             .strftime('%H:%M:%S, %d/%m', $this->retrieveTimestamp).' via '.$api.' api.';
-        $logData = array('type'=>'product', 'amount created/updated'=>count($retailExpressDataById), 'period [s]'=>$seconds);
-        if (count($retailExpressDataById) > 0) {
-            $logData['per entity [s]'] = round($seconds / count($retailExpressDataById), 3);
+        $logData = array('type'=>'product', 'amount created/updated'=>count($retailExpressData), 'period [s]'=>$seconds);
+        if (count($retailExpressData) > 0) {
+            $logData['per entity [s]'] = round($seconds / count($retailExpressData), 3);
         }
         $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_p_re_no', $message, $logData);
     }
@@ -350,7 +363,7 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
             foreach ($products->children() as $product) {
                 $productId = (string) $product->ProductId;
                 $retailExpressDataById[$productId] = array();
-                foreach ($product as $key => $value) {
+                foreach ($product as $key=>$value) {
                     $retailExpressDataById[$productId][$key] = (string) $value;
                 }
             }
@@ -374,7 +387,7 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
 
                 $isConfigurable = isset($data['configurable']) && $data['configurable'];
                 if (!($isConfigurable && in_array($localCode, $this->configurableAttributesToRemove))) {
-                    if (is_string($code)) {
+                    if (is_string($code) || is_array($code) && count($code) > 1) {
                         $value = $data[$localCode];
                     }elseif (is_array($code) && count($code) == 1) {
                         $method = current($code);
@@ -396,6 +409,10 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
 
                     if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
                         $mappedData[$code] = $value;
+                    }elseif (is_array($code) && count($code) > 1 && isset($value) && !isset($error)) {
+                        foreach ($code as $c) {
+                            $mappedData[$c] = $value;
+                        }
                     }else{
                         $this->getServiceLocator()->get('logService')
                             ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error,
@@ -426,12 +443,12 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
     {
         $needsUpdate = TRUE;
 
-        $existingEntity = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'product', 0, $productId);
+        $existingEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'product', 0, $sku);
         if (!$existingEntity) {
-            $existingEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'product', 0, $sku);
-            $noneOrWrongLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
+            $existingEntity = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'product', 0, $productId);
 
             if (!$existingEntity) {
+                $noneOrWrongLocalId = TRUE;
                 $data = array_replace($this->mappedCreateProductDataPreset, $data);
                 $existingEntity = $this->_entityService
                     ->createEntity($this->_node->getNodeId(), 'product', 0, $sku, $data, $parentId);
@@ -457,23 +474,6 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                         );
                 }
                 $needsUpdate = FALSE;
-            }elseif ($noneOrWrongLocalId != NULL) {
-                $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
-
-                $stockEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', 0, $sku);
-                if ($this->_entityService->getLocalId($this->_node->getNodeId(), $stockEntity) != NULL) {
-                    $this->_entityService->unlinkEntity($this->_node->getNodeId(), $stockEntity);
-                }
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $productId);
-
-                $this->getServiceLocator()->get('logService')
-                    ->log(LogService::LEVEL_ERROR,
-                        'rex_p_relink',
-                        'Incorrectly linked product '.$sku.' ('.$noneOrWrongLocalId.'). Re-linked now.',
-                        array('code'=>$sku, 'wrong local id'=>$noneOrWrongLocalId),
-                        array('node'=>$this->_node, 'entity'=>$existingEntity)
-                    );
             }else{
                 $this->getServiceLocator() ->get('logService')
                     ->log(LogService::LEVEL_INFO,
@@ -485,13 +485,33 @@ $call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$r
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
             }
         }else{
+            $noneOrWrongLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
+
+            if ($noneOrWrongLocalId != NULL) {
+                $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
+
+                $stockEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', 0, $sku);
+                if ($this->_entityService->getLocalId($this->_node->getNodeId(), $stockEntity) != null) {
+                    $this->_entityService->unlinkEntity($this->_node->getNodeId(), $stockEntity);
+                }
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $productId);
+
+                $this->getServiceLocator()->get('logService')
+                    ->log(LogService::LEVEL_ERROR, 'rex_p_relink',
+                        'Incorrectly linked product '.$sku.' ('.$noneOrWrongLocalId.'). Re-linked now.',
+                        array('code'=>$sku, 'wrong local id'=>$noneOrWrongLocalId),
+                        array('node'=>$this->_node, 'entity'=>$existingEntity)
+                    );
+            }
+
             $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_INFO,
-                    'rex_p_upd',
-                    'Updated product '.$sku,
-                    array('sku'=>$sku),
-                    array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
-                );
+                    ->log(LogService::LEVEL_INFO,
+                        'rex_p_upd',
+                        'Updated product '.$sku,
+                        array('sku'=>$sku),
+                        array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
+                    );
         }
 
         if ($needsUpdate) {
