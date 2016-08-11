@@ -314,7 +314,7 @@ class ProductGateway extends AbstractGateway
                     $message = 'Product process error: '.$exception->getMessage();
                     throw new GatewayException($message, $exception->getCode(), $exception);
                 }
-var_dump($productId);var_dump($sku);
+
                 try {
                     $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressProductData);
 
