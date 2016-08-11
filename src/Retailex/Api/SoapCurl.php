@@ -272,16 +272,17 @@ class SoapCurl implements ServiceLocatorAwareInterface
                         $error = 'No valid response from Retail Express.';
                     }
 
+                    $logMessage = "Curl call $call ";
                     if (strlen($error) == 0) {
                         $success = TRUE;
                         $logLevel = LogService::LEVEL_INFO;
                         $logCode .= '_suc';
-                        $logMessage = 'Curl call succeeded. ';
+                        $logMessage .= 'succeeded. ';
                     }else{
                         $success = FALSE;
                         $logLevel = LogService::LEVEL_ERROR;
                         $logCode .= '_fail';
-                        $logMessage = 'Curl call failed. Error message: '.$error;
+                        $logMessage .= 'failed. Error message: '.$error;
                         $logData['error'] = $error;
                     }
 
