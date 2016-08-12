@@ -275,12 +275,12 @@ class SoapCurl implements ServiceLocatorAwareInterface
                     $logMessage = "Curl call $call ";
                     if (strlen($error) == 0) {
                         $success = TRUE;
-                        $logLevel = LogService::LEVEL_INFO;
+                        $logLevel = LogService::LEVEL_DEBUGEXTRA;
                         $logCode .= '_suc';
                         $logMessage .= 'succeeded. ';
                     }else{
                         $success = FALSE;
-                        $logLevel = LogService::LEVEL_ERROR;
+                        $logLevel = LogService::LEVEL_DEBUG;
                         $logCode .= '_fail';
                         $logMessage .= 'failed. Error message: '.$error;
                         $logData['error'] = $error;
