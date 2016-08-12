@@ -214,6 +214,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
                 }
 
                 $logData = array(
+                    'data'=>$data,
                     'options'=>$this->curlOptions,
                     'curl info'=>curl_getinfo($this->curlHandle)
                 );
