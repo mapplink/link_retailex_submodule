@@ -640,6 +640,8 @@ class ProductGateway extends AbstractGateway
      */
     public function writeUpdates(\Entity\Entity $entity, $attributes, $type = Update::TYPE_UPDATE)
     {
+        return FALSE;
+
         $nodeId = $this->_node->getNodeId();
         $sku = $entity->getUniqueId();
 
