@@ -113,18 +113,15 @@ class CustomerGateway extends AbstractGateway
         /** @var EntityService $entityService */
         $entityService = $this->getServiceLocator()->get('entityService');
         $nodeId = $this->_node->getNodeId();
+        $entityType = $entity->getTypeStr();
+        $attributes = array_unique(array_merge($attributes, array('first_name', 'last_name')));
 
-        if ($entity->getTypeStr() == 'address') {
+        if ($entityType == 'address') {
             try{
                 $entity = $entity->getParent(TRUE);
             }catch (\Exception $exception) {
                 $addressUnique = $entity->getUniqueId();
-                $customerLocalId = (int) ltrim('-', strstr($addressUnique, '-'));
-                if ($customerLocalId) {
-                    $entity = $entityService->loadEntityLocal($nodeId, 'customer', 0, $customerLocalId);
-                }else{
-                    $entity = NULL;
-                }
+                $entity = NULL;
             }
             $attributes = array();
         }
@@ -224,26 +221,36 @@ class CustomerGateway extends AbstractGateway
             $localId = $entityService->getLocalId($nodeId, $entity);
             if ($localId) {
                 $type = \Entity\Update::TYPE_UPDATE;
+                $data['CustomerId'] = $localId;
             }else{
                 $type = \Entity\Update::TYPE_CREATE;
             }
+
+            $logData = array('entity type'=>$entityType, 'customer'=>$entity, 'attributes'=>$attributes,
+                'billing'=>$billingAddress, 'shipping'=>$shippingAddress);
 
             try{
                 $call = 'CustomerCreateUpdate';
                 $data = array('CustomerXML'=>array('Customers'=>array('Customer'=>$data)));
                 $response = $this->soap->call($call, $data);
 
+                $logData['response'] = $response;
+
                 $customer = current($response->xpath('//Customer'));
-                $localId = (int) $customer->CustomerId;
-            }catch(\Exception $exception){
-                throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
+                if ($customer && isset($customer->Result) && $customer->Result == 'Success') {
+                    $localId = (int) $customer->CustomerId;
+                }
+            }catch (\Exception $exception) {
+                $message = 'Error on CustomerCreateUpdate: '.$exception->getMessage();
+                $this->getServiceLocator()->get('logService')
+                    ->log(LogService::LEVEL_ERROR, 'rex_cu_wr_err', $message, $logData);
             }
 
             if ($type == \Entity\Update::TYPE_CREATE) {
                 if (!$localId) {
                     $message = 'Error creating customer in Retailex ('.$entity->getUniqueId().'! No local id.';
                     $this->getServiceLocator()->get('logService')
-                        ->log(LogService::LEVEL_ERROR, 'rex_cu_wr_locerr', $message, array());
+                        ->log(LogService::LEVEL_ERROR, 'rex_cu_wr_locerr', $message, $logData);
                 }else{
                     $entityService->linkEntity($this->_node->getNodeId(), $entity, $localId);
                 }
