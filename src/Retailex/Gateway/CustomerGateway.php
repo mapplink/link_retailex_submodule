@@ -226,8 +226,8 @@ class CustomerGateway extends AbstractGateway
                 $type = \Entity\Update::TYPE_CREATE;
             }
 
-            $logData = array('entity type'=>$entityType, 'customer'=>$entity, 'attributes'=>$attributes,
-                'billing'=>$billingAddress, 'shipping'=>$shippingAddress);
+            $logData = array('type'=>$entityType, 'customer'=>(is_null($entity) ? 'NULL' : $entity->getFullArrayCopy()),
+                'attributes'=>$attributes, 'billing'=>$billingAddress, 'shipping'=>$shippingAddress, 'data'=>$data);
 
             try{
                 $call = 'CustomerCreateUpdate';
