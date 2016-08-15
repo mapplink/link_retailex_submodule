@@ -142,6 +142,47 @@ class SoapCurl implements ServiceLocatorAwareInterface
     }
 
     /**
+     * @param string $key
+     * @param mixed $value
+     * @param bool $setPrefix
+     * @return string
+     */
+    protected static function getXmlElementString($data, $setPrefix = TRUE)
+    {
+        $elementString = '';
+
+        if (is_bool($setPrefix) && $setPrefix) {
+            $prefix = 'ret:';
+        }else{
+            $prefix = '';
+        }
+
+        foreach ($data as $key=>$value) {
+            $elementString .= '<'.$prefix.$key.'>';
+
+            if (isset($value) && is_array($value)) {
+                $xml = substr($key, -3) == 'XML';
+
+                if ($xml) {
+                    $setPrefix = FALSE;
+                    $elementString .= '<![CDATA[';
+                    $postfix = ']]>';
+                }else {
+                    $postfix = '';
+                }
+
+                $elementString .= self::getXmlElementString($value, $setPrefix).$postfix;
+            }else{
+                $elementString .= $value;
+            }
+
+            $elementString .= '</'.$prefix.$key.'>';
+        }
+
+        return $elementString;
+    }
+
+    /**
      * @param string $call
      * @param array $data
      * @throws \SoapFault
@@ -167,11 +208,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
             $allHeaderFieldsSet = $allHeaderFieldsSet && (strlen($curlHeader) > 0);
         }
 
-        $soapBody = '';
-        foreach ($data as $key=>$value) {
-            $soapBody .= '<ret:'.$key.'>'.$value.'</ret:'.$key.'>';
-        }
-
+        $soapBody = self::getXmlElementString($data);
         $preparationSuccessful = $allHeaderFieldsSet && strlen($soapBody) > 0;
 
         if ($preparationSuccessful) {
