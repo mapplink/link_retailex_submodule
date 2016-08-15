@@ -47,15 +47,6 @@ class Node extends AbstractNode
     }
 
     /**
-     * Retailex node handles update slightly different:
-     *   writeUpdates() in parent accumulates data and
-     *   accumulated data is written to the file by writeUpdatesToFile()
-     */
-    public function update()
-    {
-    }
-
-    /**
      * Returns an api instance set up for this node. Will return false if that type of API is unavailable.
      * @param string $type The type of API to establish - must be available as a service with the name "magento_{type}"
      * @return object|false
@@ -100,7 +91,6 @@ class Node extends AbstractNode
                 $gateway = new Gateway\ProductGateway;
                 break;
             case 'order':
-            case 'orderitem':
                 $gateway = new Gateway\OrderGateway;
                 break;
             default:
