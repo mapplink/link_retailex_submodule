@@ -24,6 +24,14 @@ class CustomerGateway extends AbstractGateway
     const GATEWAY_ENTITY_CODE = 'cu';
     const ATTRIBUTE_NOT_DEFINED = '> Information missing <';
 
+    /** @var array $this->defaultAttributeMapping */
+    protected $defaultAttributeMapping = array(
+        'DelAddress'=>self::ATTRIBUTE_NOT_DEFINED,
+        'DelPostCode'=>self::ATTRIBUTE_NOT_DEFINED,
+        'DelSuburb'=>self::ATTRIBUTE_NOT_DEFINED,
+        'DelState'=>self::ATTRIBUTE_NOT_DEFINED,
+        'ReceiverNews'=>0
+    );
     /** @var array $this->billingAttributeMapping */
     protected $billingAttributeMapping = array(
         'BillFirstName'=>'first_name',
@@ -53,8 +61,8 @@ class CustomerGateway extends AbstractGateway
     {
         $success = parent::_init($entityType);
 
-        if ($entityType != 'customer') {
-            throw new GatewayException('Invalid entity type for this gateway');
+        if ($entityType != 'customer' && $entityType != 'address') {
+            throw new GatewayException('Invalid entity type '.$entityType.' for this gateway');
             $success = FALSE;
         }else{
             $this->getServiceLocator()->get('logService')
@@ -71,6 +79,8 @@ class CustomerGateway extends AbstractGateway
     {
         $this->getServiceLocator()->get('logService')
             ->log(LogService::LEVEL_INFO, 'rex_cu_re_no', 'Customer retrieval not implemented yet.', array());
+
+        return FALSE;
     }
 
     /**
@@ -100,22 +110,18 @@ class CustomerGateway extends AbstractGateway
      */
     public function writeUpdates(Entity $entity, $attributes, $type = \Entity\Update::TYPE_UPDATE)
     {
-        return FALSE;
-
-        // ToDo: Implement writeUpdates() method.
+        if ($entity->getTypeStr() == 'address') {
+            $entity = $entity->getParent(TRUE);
+            $attributes = array();
+        }
 
         /** @var EntityService $entityService */
         $entityService = $this->getServiceLocator()->get('entityService');
+        $nodeId = $this->_node->getNodeId();
 
-        $data = array(
-            'Password'=>$this->getRandomPassword(),
-            'BillEmail'=>$entity->getUniqueId(),
-            'DelAddress'=>self::ATTRIBUTE_NOT_DEFINED,
-            'DelPostCode'=>self::ATTRIBUTE_NOT_DEFINED,
-            'DelSuburb'=>self::ATTRIBUTE_NOT_DEFINED,
-            'DelState'=>self::ATTRIBUTE_NOT_DEFINED,
-            'ReceivesNews'=>0
-        );
+        $data = $this->defaultAttributeMapping;
+        $data['Password'] = $this->getRandomPassword();
+        $data['BillEmail'] = $entity->getUniqueId();
 
         $billingAddress = $entity->resolve('billing_address', 'address');
         $shippingAddress = $entity->resolve('shipping_address', 'address');
@@ -133,7 +139,7 @@ class CustomerGateway extends AbstractGateway
             $data['BillSuburb'] = $billingAddress->getSuburb();
 
             foreach ($this->billingAttributeMapping as $localCode=>$code) {
-                $data[$localCode] = $billingAddress->getData($code, null);
+                $data[$localCode] = $billingAddress->getData($code, NULL);
             }
         }
         if (!is_null($shippingAddress)) {
@@ -150,7 +156,7 @@ class CustomerGateway extends AbstractGateway
             $data['DelSuburb'] = $shippingAddress->getSuburb();
 
             foreach ($this->shippingAttributeMapping as $localCode=>$code) {
-                $data[$localCode] = $shippingAddress->getData($code, null);
+                $data[$localCode] = $shippingAddress->getData($code, NULL);
             }
         }
 
@@ -194,35 +200,29 @@ class CustomerGateway extends AbstractGateway
             }
         }
 
-        if ($type == \Entity\Update::TYPE_UPDATE) {
-            $req = array(
-                $entity->getUniqueId(),
-                $data,
-                $entity->getStoreId(),
-                'sku'
-            );
-            $this->soap->call('catalogCustomerUpdate', $req);
-        }else if($type == \Entity\Update::TYPE_CREATE){
+        $localId = $entityService->getLocalId($nodeId, $entity);
+        if ($localId) {
+            $type = \Entity\Update::TYPE_UPDATE;
+        }else{
+            $type = \Entity\Update::TYPE_CREATE;
+        }
 
-            $attributeSet = NULL;
-            foreach($this->_attSets as $setId=>$set){
-                if($set['name'] == $entity->getData('customer_class', 'default')){
-                    $attributeSet = $setId;
-                    break;
-                }
+var_dump($data);
+        $data = array('CustomerXML'=>array('Customers'=>array('Customer'=>$data)));
+var_dump($data);
+        $response = $this->soap->call('CustomerCreateUpdate', $data);
+var_dump($response);
+        $customer = current($response->xpath('//Customer'));
+var_dump($customer);
+        foreach ($customer->children() as $data) {
+var_dump($data);
+        }
+die();
+        if($type == \Entity\Update::TYPE_CREATE){
+            if (!$response) {
+                throw new MagelinkException('Error creating customer in Retailex ('.$entity->getUniqueId().'!');
             }
-            $req = array(
-                $entity->getData('type'),
-                $attributeSet,
-                $entity->getUniqueId(),
-                $data,
-                $entity->getStoreId()
-            );
-            $res = $this->soap->call('catalogCustomerCreate', $req);
-            if(!$res){
-                throw new MagelinkException('Error creating customer in Retailex (' . $entity->getUniqueId() . '!');
-            }
-            $entityService->linkEntity($this->_node->getNodeId(), $entity, $res);
+            $entityService->linkEntity($this->_node->getNodeId(), $entity, $response['CustomerId']);
         }
     }
 
@@ -245,7 +245,7 @@ class CustomerGateway extends AbstractGateway
                 $this->soap->call('catalogCustomerDelete', array($entity->getUniqueId(), 'sku'));
                 break;
             default:
-                throw new MagelinkException('Unsupported action type ' . $action->getType() . ' for Retailex Orders.');
+                throw new MagelinkException('Unsupported action type '.$action->getType().' for Retailex Orders.');
         }
 */
     }
