@@ -255,6 +255,7 @@ class ProductGateway extends AbstractGateway
                     $products = $this->getProductsData($soapXml);
                 }catch(\Exception $exception){
                     throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
+                    continue;
                 }
 
                 $createConfigurable = isset($retailExpressDataRow['MatrixProduct'])
