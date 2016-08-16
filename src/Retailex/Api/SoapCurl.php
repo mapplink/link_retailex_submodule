@@ -265,7 +265,6 @@ class SoapCurl implements ServiceLocatorAwareInterface
                         ->log(LogService::LEVEL_ERROR, $logCode, $logMessage, $logData);
                     $responseXml = NULL;
                 }else{
-//$response = file_get_contents('/Users/andreasg/projects/lnomd/data/rex_pds.gz');
                     if ($unGzipped = @gzdecode($response)) {
                         $soapFaultMatches = NULL;
                         $response = $unGzipped;
