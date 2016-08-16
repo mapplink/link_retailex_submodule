@@ -22,7 +22,7 @@ abstract class AbstractGateway extends BaseAbstractGateway
     const GATEWAY_ENTITY_CODE = 'gty';
 
 
-    /** @var \Entity\Service\EntityConfigService $entityConfigService */
+    /** @var \Entity\Service\EntityConfigService $this->entityConfigService */
     protected $entityConfigService = NULL;
     /** @var \Retailex\Api\Soap $this->soap */
     protected $soap = NULL;
@@ -41,6 +41,7 @@ abstract class AbstractGateway extends BaseAbstractGateway
     protected function _init($entityType)
     {
         $this->soap = $this->_node->getApi('soap');
+        $this->entityConfigService = $this->getServiceLocator()->get('entityConfigService');
 
         if (!$this->soap) {
             throw new GatewayException('SOAP is required for Retailex '.ucfirst($entityType));
