@@ -210,12 +210,8 @@ class ProductGateway extends AbstractGateway
      * @throws SyncException
      * @throws GatewayException
      */
-    public function retrieve()
+    public function retrieveEntities()
     {
-        /** @var \Entity\Service\EntityConfigService $entityConfigService */
-        $entityConfigService = $this->getServiceLocator()->get('entityConfigService');
-
-        $this->getNewRetrieveTimestamp();
         $lastRetrieve = $this->getLastRetrieveDate();
 
         $this->getServiceLocator()->get('logService')
@@ -225,7 +221,6 @@ class ProductGateway extends AbstractGateway
                array('type'=>'product', 'datetime'=>$lastRetrieve)
             );
 
-//$retrieveProductId = 140268;$timestamp = time() - 1209600;$lastRetrieve = date('Y-m-d', $timestamp).'T'.date('H:i:s', $timestamp).'Z';$lastRetrieve=date('c', $timestamp);
         if ($this->soap) {
             $api = $this->soap->getApiType();
             $filter = array(
@@ -235,7 +230,6 @@ class ProductGateway extends AbstractGateway
 
             try{
                 $call = 'ProductsGetBulkDetailsByChannel';
-//$call = 'ProductGetDetailsStockPricingByChannel';$filter = array('ProductId'=>$retrieveProductId, 'ChannelId'=>intval($this->_node->getConfig('retailex-channel')));
                 $soapXml = $this->soap->call($call, $filter);
                 $retailExpressDataById = $this->getProductsData($soapXml);
             }catch (\Exception $exception) {
@@ -336,8 +330,14 @@ class ProductGateway extends AbstractGateway
             $api = '-';
         }
 
-        $this->_nodeService
-            ->setTimestamp($this->_nodeEntity->getNodeId(), 'product', 'retrieve', $this->getNewRetrieveTimestamp());
+        if (count($retailExpressData) > 0) {
+            $this->_nodeService->setTimestamp(
+                $this->_nodeEntity->getNodeId(),
+                'product',
+                'retrieve',
+                $this->getNewRetrieveTimestamp()
+            );
+        }
 
         $seconds = ceil(time() - $this->getNewRetrieveTimestamp());
         $message = 'Retrieved '.count($retailExpressDataById).' products in '.$seconds.'s up to '
@@ -347,6 +347,8 @@ class ProductGateway extends AbstractGateway
             $logData['per entity [s]'] = round($seconds / count($retailExpressData), 3);
         }
         $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_p_re_no', $message, $logData);
+
+        return $retailExpressData;
     }
 
     /**
