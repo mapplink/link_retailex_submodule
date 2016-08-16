@@ -205,10 +205,9 @@ class ProductGateway extends AbstractGateway
 
     /**
      * Retrieve and action all updated records(either from polling, pushed data, or other sources).
-     * @throws MagelinkException
-     * @throws NodeException
-     * @throws SyncException
+     * @return int $numberOfRetrievedEntities
      * @throws GatewayException
+     * @throws NodeException
      */
     public function retrieveEntities()
     {
@@ -348,7 +347,7 @@ class ProductGateway extends AbstractGateway
         }
         $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_p_re_no', $message, $logData);
 
-        return $retailExpressData;
+        return count($retailExpressData);
     }
 
     /**
