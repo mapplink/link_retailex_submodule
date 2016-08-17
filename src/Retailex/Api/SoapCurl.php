@@ -265,17 +265,24 @@ class SoapCurl implements ServiceLocatorAwareInterface
                         ->log(LogService::LEVEL_ERROR, $logCode, $logMessage, $logData);
                     $responseXml = NULL;
                 }else{
-                    if ($unGzipped = @gzdecode($response)) {
-                        $soapFaultMatches = NULL;
-                        $response = $unGzipped;
-                        $responseMatches = array(1=>$response);
-                    }else{
-                        if (isset($response[$call]['any'])) {
-                            $response = $response[$call]['any'];
-                        }
-                        preg_match('#<soap:Fault>.*?</soap:Fault>#ism', $response, $soapFaultMatches);
-                        preg_match('#<soap:Body>(.*?)</soap:Body>#ism', $response, $responseMatches);
+                    if (is_array($response) && isset($response[$call]['any'])) {
+                        $response = $response[$call]['any'];
                     }
+
+                    preg_match('#<soap:Fault>.*?</soap:Fault>#ism', $response, $soapFaultMatches);
+                    preg_match('#<soap:Body>(.*?)</soap:Body>#ism', $response, $responseMatches);
+
+                    $hasBody = isset($responseMatches[1]) && strlen($responseMatches[1]) > 0;
+                    $hasFaults = isset($soapFaultMatches[1]) && strlen($soapFaultMatches[1]) > 0;
+
+                    if (!$hasBody && !$hasFaults) {
+                        if ($unGzipped = @gzdecode($response)) {
+                            $soapFaultMatches = NULL;
+                            $response = $unGzipped;
+                            $responseMatches = array(1=>$response);
+                        }
+                    }
+
                     $logData['response'] = mb_substr($response, 0, 1024);
 
                     try{
