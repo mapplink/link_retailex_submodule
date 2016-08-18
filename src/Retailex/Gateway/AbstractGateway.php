@@ -18,8 +18,9 @@ use Node\AbstractGateway as BaseAbstractGateway;
 abstract class AbstractGateway extends BaseAbstractGateway
 {
 
+    const GATEWAY_NODE_CODE = 'rex';
+    const GATEWAY_ENTITY_CODE = 'gey';
     const GATEWAY_ENTITY = 'generic';
-    const GATEWAY_ENTITY_CODE = 'gty';
 
 
     /** @var \Entity\Service\EntityConfigService $this->entityConfigService */
