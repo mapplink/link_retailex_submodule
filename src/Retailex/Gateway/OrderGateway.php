@@ -30,15 +30,50 @@ class OrderGateway extends AbstractGateway
     const GATEWAY_ENTITY_CODE = 'o';
 
     /** @var array $this->billingAttributeMapping */
-    protected $attributeMapping = array(
+    protected $createOrderAttributeMap = array(
 //        'ExternalOrderId'=>'UNIQUE_ID',
-        'DateCreated'=>'last_name',
+        'DateCreated'=>'placed_at',
+        'OrderTotal'=>array('getOrderTotal'),
+        'OrderStatus'=>array('status'=>'getRetailExpressStatus'),
+        'CustomerId'=>array('customer'=>'getLocalCustomer'),
+        'ExternalCustomerId'=>'customer',
+        'BillEmail'=>'customer_email',
+        'ReceiverNews'=>0
+    );
+    /** @var array $this->billingAttributeMapping */
+    protected $createOrderBillingAttributeMapping = array(
+        'BillFirstName'=>'first_name',
+        'BillLastName'=>'last_name',
+        //'BillAddress'=>'street',
         'BillCompany'=>'company',
         'BillPhone'=>'telephone',
         'BillPostCode'=>'postcode',
         'BillState'=>'region',
         'BillCountry'=>'country_code'
     );
+    /** @var array $this->shippingAttributeMapping */
+    protected $createOrderShippingAttributeMapping = array(
+        'DelCompany'=>'company',
+        //'DelAddress'=>'street',
+        //'DelSuburb'=>'street',
+        'DelPhone'=>'telephone',
+        'DelPostCode'=>'postcode',
+        'DelState'=>'region',
+        'DelCountry'=>'country_code'
+    );
+    /** @var array $this->paymentAttributeMap */
+    protected $paymentAttributeMap = array(
+        'OrderId'=>array('getLocalOrderId'),
+        'MethodId'=>array('payment_method'=>'getMethodId'),
+        'Amount'=>'grand_total',
+        'DateCreated'=>'placed_at'
+    );
+    /** @var array $this->paymentedMethodMapping */
+    protected $methodById = array(
+        11=>'paypal_express',
+        13=>'paymentexpress_pxpay2'
+    );
+
 
     /**
      * Initialize the gateway and perform any setup actions required.
@@ -167,25 +202,32 @@ class OrderGateway extends AbstractGateway
     public function writeAction(\Entity\Action $action)
     {
         $logCode = 'rex_o_wa';
+        $success = FALSE;
 
         $this->getServiceLocator()->get('logService')
             ->log(LogService::LEVEL_INFO, $logCode.'_no', 'Order write action not implemented yet.', array());
 
-        return FALSE;
-
         if (!$this->soap) {
             throw new NodeException('No valid API available for sync');
             $api = '-';
-            $success = FALSE;
-
         }else{
             $api = $this->soap->getApiType();
-            $localId = $this->_entityService->getLocalId($nodeId, $action->getEntity());
+
+            /** @var Order $order */
+            $order = $action->getEntity();
+            $orderStatus = $order->getData('status');
+            $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $order);
+
+            $logLevel = LogService::LEVEL_INFO;
+            $logData = array('action type'=>$action->getType(), 'order unique'=>$order->getUniqueId());
+            $logEntities = array('action'=>$action, 'order'=>$order);
 
             switch ($action->getType()) {
                 case 'cancel':
-                    $logCode .= '_ccl';
-                    if (isset($localId) && Magento2OrderGateway::hasOrderStateCanceled($action->get)) {
+                    $logCode .= '_cl';
+                    $message = 'Order cannot be cancelled';
+
+                    if (isset($localId) && Magento2OrderGateway::hasOrderStateCanceled($orderStatus)) {
                         $call = 'OrderCancel';
                         $data = array('OrderId'=>$localId);
 
@@ -194,20 +236,29 @@ class OrderGateway extends AbstractGateway
                             $logData['response'] = $response;
 
                             $result = current($response->xpath('//Result'));
-                            $success = TRUE;
-                        }catch(\Exception $exception){
+                            $logData['response result'] = $result;
+                            $success = (strtolower($result) == 'success');
+                        }catch(\Exception $exception) {
                             throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
-                            $success = FALSE;
                         }
 
-                        $logLevel = LogService::LEVEL_INFO;
-                        $message = '';
-
-                    }else {
-                        $success = FALSE;
+                        if ($success) {
+                            $message = 'Cancelled order successfully.';
+                        }else{
+                            $logLevel = LogService::LEVEL_ERROR;
+                            $logCode .= '_fail';
+                            $message = 'Cancel order failed';
+                        }
+                    }elseif (!Magento2OrderGateway::hasOrderStateCanceled($orderStatus)) {
                         $logLevel = LogService::LEVEL_ERROR;
-                        $logCode = '_err';
-                        $message = '';
+                        $logCode .= '_wsts';
+                        $message .= '. It has the wrong status: '.$orderStatus;
+                    }elseif (!isset($localId)) {
+                        $logLevel = LogService::LEVEL_ERROR;
+                        $logCode .= '_err';
+                        $message .= ' Retail Express. Local id is missing';
+                    }else{
+                        $logCode .= '_err?';
                     }
                     break;
 
@@ -222,20 +273,26 @@ class OrderGateway extends AbstractGateway
                             $response = $this->soap->call($call, $data);
                             $logData['response'] = $response;
 
-                            $order = current($response->xpath('//Order'));
+                            $result = current($response->xpath('//Result'));
+                            $logData['response result'] = $result;
+                            $success = (strtolower($result) == 'success');
                         }catch(\Exception $exception){
                             throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                         }
 
-                        $success = TRUE;
-                        $logLevel = LogService::LEVEL_INFO;
-                        $message = '';
-
-                    }else {
-                        $success = FALSE;
+                        if ($success) {
+                            $success = TRUE;
+                            $logLevel = LogService::LEVEL_INFO;
+                            $message = 'Payment was added successfully.';
+                        }else{
+                            $logLevel = LogService::LEVEL_ERROR;
+                            $logCode .= 'fail';
+                            $message = 'Add payment failed';
+                        }
+                    }else{
                         $logLevel = LogService::LEVEL_ERROR;
                         $logCode = '_err';
-                        $message = '';
+                        $message = 'Payment cannot be added due to missing local id';
                     }
                     break;
 
@@ -247,12 +304,57 @@ class OrderGateway extends AbstractGateway
             }
 
             if (isset($logLevel)) {
+                if (!$success) {
+                    if (isset($result)) {
+                        $message .= ' with result: '.var_export($result, TRUE);
+                    }elseif (isset($exception)) {
+                        $message .= ' with exception: '.$exception->getMessage();
+                    }else{
+                        $message .= '.';
+                    }
+                }
+
                 $this->getServiceLocator()->get('logService')
-                    ->log($logLevel, $logCode, $message, array('action type'=>$action->getType()), array('action'=>$action)
-                    );
+                    ->log($logLevel, $logCode, $message, $logData, $logEntities);
             }
         }
+
         return $success;
+    }
+
+    /**
+     * @param int $methodString
+     * @return int|NULL $methodId
+     */
+    public static function getMethodId($methodString)
+    {
+        return self::getMappedId('method', $methodString);
+    }
+
+    /**
+     * @param Order $order
+     * @return float $orderTotal
+     */
+    protected function getOrderTotal(Order $order)
+    {
+        return $order->getOrderTotal();
+    }
+
+    protected function getRetailExpressStatus($status)
+    {
+        if (Magento2OrderGateway::hasOrderStatePending($status)) {
+            $retailExpressStatus = 'Quote'; // 'Awaiting Payment';
+        }elseif (Magento2OrderGateway::hasOrderStateCanceled($status)) {
+            $retailExpressStatus = 'Cancelled';
+        }elseif (Magento2OrderGateway::hasOrderStateProcessing($status)) {
+            $retailExpressStatus = 'Processed';
+        }elseif (Magento2OrderGateway::hasFinalOrderState($status)) {
+            $retailExpressStatus = 'Processed';
+        }else{
+            $retailExpressStatus = 'Incomplete';
+        }
+
+        return $retailExpressStatus;
     }
 
 }
