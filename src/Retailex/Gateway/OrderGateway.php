@@ -148,7 +148,7 @@ class OrderGateway extends AbstractGateway
 
         }elseif (!isset($localId)) {
             $call = 'Order CreateByChannel';
-            $data = array('OrderXML'=>array('Customers'=>array('Customer'=>$data)));
+            $data = array('OrderXML'=>array('Orders'=>array('Order'=>$this->getOrderCreateData($entity))));
 
             try{
                 $response = $this->soap->call($call, $data);
@@ -267,7 +267,9 @@ class OrderGateway extends AbstractGateway
 
                     if (isset($localId)) {
                         $call = 'OrderAddPayment';
-                        $data = array('PaymentXML'=>array('OrderPayments'=>array('OrderPayment'=>$data)));
+                        $data = array('PaymentXML'=>array('OrderPayments'=>array(
+                            'OrderPayment'=>$this->getOrderAddPaymentData($order)
+                        )));
 
                         try{
                             $response = $this->soap->call($call, $data);
@@ -340,6 +342,10 @@ class OrderGateway extends AbstractGateway
         return $order->getOrderTotal();
     }
 
+    /**
+     * @param string $status
+     * @return string $retailExpressStatus
+     */
     protected function getRetailExpressStatus($status)
     {
         if (Magento2OrderGateway::hasOrderStatePending($status)) {
@@ -357,4 +363,13 @@ class OrderGateway extends AbstractGateway
         return $retailExpressStatus;
     }
 
+    protected function getOrderCreateData(Order $order)
+    {
+        return $createData;
+    }
+
+    protected function getOrderAddPaymentData(Order $order)
+    {
+        return $paymentData;
+    }
 }
