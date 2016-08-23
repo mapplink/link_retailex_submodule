@@ -470,27 +470,27 @@ class ProductGateway extends AbstractGateway
         return $mappedData;
     }
     /**
-     * @param int $productId
+     * @param int $localId
      * @param string $sku
      * @param int $storeId
      * @param int $parentId
      * @param array $data
      * @return \Entity\Entity|NULL
      */
-    protected function processProductUpdate($productId, $sku, $storeId, $parentId, array $data)
+    protected function processProductUpdate($localId, $sku, $storeId, $parentId, array $data)
     {
         $needsUpdate = TRUE;
 
         $existingEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'product', 0, $sku);
         if (!$existingEntity) {
-            $existingEntity = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'product', 0, $productId);
+            $existingEntity = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'product', 0, $localId);
 
             if (!$existingEntity) {
                 $noneOrWrongLocalId = TRUE;
                 $data = array_replace($this->mappedCreateProductDataPreset, $data);
                 $existingEntity = $this->_entityService
                     ->createEntity($this->_node->getNodeId(), 'product', 0, $sku, $data, $parentId);
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $localId);
                 $this->getServiceLocator()->get('logService')
                     ->log(LogService::LEVEL_INFO,
                         'rex_p_new',
@@ -501,7 +501,7 @@ class ProductGateway extends AbstractGateway
                 try{
                     $stockEntity = $this->_entityService
                         ->createEntity($this->_node->getNodeId(), 'stockitem', 0, $sku, array(), $existingEntity);
-                    $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $productId);
+                    $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $localId);
                 }catch (\Exception $exception) {
                     $this->getServiceLocator() ->get('logService')
                         ->log(LogService::LEVEL_WARN,
@@ -513,27 +513,27 @@ class ProductGateway extends AbstractGateway
                 }
                 $needsUpdate = FALSE;
             }else{
+                $noneOrWrongLocalId = FALSE;
                 $this->getServiceLocator() ->get('logService')
                     ->log(LogService::LEVEL_INFO,
-                        'rex_p_link',
-                        'Unlinked product '.$sku,
-                        array('sku'=>$sku),
+                        'rex_p_local',
+                        'Retrieved product '.$sku.' by local id',
+                        array('sku'=>$sku, 'local id'=>$localId),
                         array('node'=>$this->_node, 'entity'=>$existingEntity)
                     );
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
             }
         }else{
             $noneOrWrongLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
 
             if ($noneOrWrongLocalId != NULL) {
                 $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $localId);
 
                 $stockEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', 0, $sku);
                 if ($this->_entityService->getLocalId($this->_node->getNodeId(), $stockEntity) != null) {
                     $this->_entityService->unlinkEntity($this->_node->getNodeId(), $stockEntity);
                 }
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $productId);
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $localId);
 
                 $this->getServiceLocator()->get('logService')
                     ->log(LogService::LEVEL_ERROR, 'rex_p_relink',
@@ -561,18 +561,19 @@ class ProductGateway extends AbstractGateway
     }
 
     /**
-     * @param int $productId
+     * @param int $productLocalId
      * @param string $sku
      * @param int $storeId
      * @param int $parentId
      * @param array $data
      * @return \Entity\Entity|NULL
      */
-    protected function processStockUpdate($productId, $sku, $storeId, $parentId, array $data)
+    protected function processStockUpdate($productLocalId, $sku, $storeId, $parentId, array $data)
     {
         $needsUpdate = TRUE;
 
-        $existingEntity = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'stockitem', 0, $productId);
+        $existingEntity = $this->_entityService
+            ->loadEntityLocal($this->_node->getNodeId(), 'stockitem', 0, $productLocalId);
         if (!$existingEntity) {
             $existingEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', 0, $sku);
             $noneOrWrongLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
@@ -587,7 +588,7 @@ class ProductGateway extends AbstractGateway
                 $needsUpdate = FALSE;
             }elseif ($noneOrWrongLocalId != NULL) {
                 $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productLocalId);
 
                 $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR,
                     'rex_p_relink',
@@ -602,7 +603,7 @@ class ProductGateway extends AbstractGateway
                     array('sku'=>$sku),
                     array('node'=>$this->_node, 'entity'=>$existingEntity)
                 );
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productId);
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productLocalId);
             }
         }else{
             $this->getServiceLocator()->get('logService')
