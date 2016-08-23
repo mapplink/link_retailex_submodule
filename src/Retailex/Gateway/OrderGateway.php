@@ -363,8 +363,61 @@ class OrderGateway extends AbstractGateway
         return $retailExpressStatus;
     }
 
+    /**
+     * @param Order $order
+     * @return array $createData
+     */
     protected function getOrderCreateData(Order $order)
     {
+        $billingAddress = $order->getBillingAddressEntity();
+        $shippingAddress = $order->getShippingAddressEntity();
+
+        $createData = array();
+
+        foreach ($this->createOrderAttributeMap as $localCode=>$code) {
+            if (is_string($code) || is_array($code) && count($code) > 1) {
+                $createData[$localCode] = $order->getData($code, NULL);;
+            }elseif (is_array($code) && count($code) == 1) {
+                $method = current($code);
+                $code = key($code);
+                $value = NULL;
+
+                try{
+                    if (method_exists('Retailex\Gateway\OrderGateway', $method)) {
+                        if (is_numeric($code)) {
+                            $value = self::$method();
+                        }else{
+                            $value = self::$method($order->getData($code, null));
+                        }
+                    }else{
+                        $error = 'Mapping method '.$method.' is not existing.';
+                    }
+                }catch (\Exception $exception) {
+                    $error = $exception->getMessage();
+                }
+            }else{
+                $error = 'Error on order data mapping.';
+            }
+
+            if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
+                $createData[$code] = $value;
+            }elseif (is_array($code) && count($code) > 1 && isset($value) && !isset($error)) {
+                foreach ($code as $subcode) {
+                    $createData[$subcode] = $value;
+                }
+            }else{
+                $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error,
+                    array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'order'=>$order->getUniqueId()));
+            }
+
+        }
+        foreach ($this->createOrderBillingAttributeMapping as $localCode=>$code) {
+            $createData[$localCode] = $billingAddress->getData($code, NULL);
+        }
+        foreach ($this->createOrderShippingAttributeMapping as $localCode=>$code) {
+            $createData[$localCode] = $shippingAddress->getData($code, NULL);
+        }
+
         return $createData;
     }
 
