@@ -493,7 +493,7 @@ class ProductGateway extends AbstractGateway
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $localId);
                 $this->getServiceLocator()->get('logService')
                     ->log(LogService::LEVEL_INFO,
-                        'rex_p_new',
+                        'rex_p_re_new',
                         'New product '.$sku,
                         array('sku'=>$sku),
                         array('node'=>$this->_node, 'entity'=>$existingEntity)
@@ -505,7 +505,7 @@ class ProductGateway extends AbstractGateway
                 }catch (\Exception $exception) {
                     $this->getServiceLocator() ->get('logService')
                         ->log(LogService::LEVEL_WARN,
-                            'rex_p_si_ex',
+                            'rex_p_re_si_ex',
                             'Already existing stockitem for new product '.$sku,
                             array('sku'=>$sku),
                             array('node'=>$this->_node, 'entity'=>$existingEntity)
@@ -516,7 +516,7 @@ class ProductGateway extends AbstractGateway
                 $noneOrWrongLocalId = FALSE;
                 $this->getServiceLocator() ->get('logService')
                     ->log(LogService::LEVEL_INFO,
-                        'rex_p_local',
+                        'rex_p_re_local',
                         'Retrieved product '.$sku.' by local id',
                         array('sku'=>$sku, 'local id'=>$localId),
                         array('node'=>$this->_node, 'entity'=>$existingEntity)
@@ -538,7 +538,7 @@ class ProductGateway extends AbstractGateway
 
                 // ToDo: Downgrade to LEVEL_WARN
                 $this->getServiceLocator()->get('logService')
-                    ->log(LogService::LEVEL_ERROR, 'rex_p_relink',
+                    ->log(LogService::LEVEL_ERROR, 'rex_p_re_relink',
                         'Incorrectly linked product '.$sku.'. Re-linked now.',
                         array('code'=>$sku, 'wrong local id'=>$storedLocalId, 'correct local id'=>$localId),
                         array('node'=>$this->_node, 'entity'=>$existingEntity)
@@ -547,7 +547,7 @@ class ProductGateway extends AbstractGateway
 
             $this->getServiceLocator()->get('logService')
                     ->log(LogService::LEVEL_INFO,
-                        'rex_p_upd',
+                        'rex_p_re_upd',
                         'Updated product '.$sku,
                         array('sku'=>$sku),
                         array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
@@ -1038,6 +1038,8 @@ class ProductGateway extends AbstractGateway
      */
     public function writeAction(Action $action)
     {
+        return FALSE;
+
         $entity = $action->getEntity();
         switch($action->getType()) {
             case 'delete':
