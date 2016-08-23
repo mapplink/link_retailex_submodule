@@ -30,27 +30,30 @@ class ProductGateway extends AbstractGateway
     /** @var array $this->productAttributeMap */
     protected $productAttributeMap = array(
 //        'ProductId'=>array('sku'=>'getSku'),
-//        'SKU'=>NULL,
-//        'Code'=>NULL,
         'Description'=>array('name', 'description'),
-//        'BrandId'=>NULL,
         'SizeId'=>array('size'=>'getSize'),
         'ColourId'=>array('color'=>'getColour'),
+//        'ManageStock'=>NULL,
+        'MasterPOSPrice'=>'price',
+        'DiscountedPrice'=>'special_price',
+//        'TaxRate'=>FALSE,
+        'Taxable'=>'taxable',
+//        'ChannelId'=>NULL
+    );
+    /** @var array $this->productAttributeMap */
+    protected $productAttributeMapOptional = array(
+        'RRP'=>'msrp',
+//        'SKU'=>NULL,
+//        'Code'=>NULL,
+//        'BrandId'=>NULL,
 //        'SeasonId'=>NULL,
 //        'ProductTypeId'=>NULL,
 //        'Freight'=>NULL,
 //        'Custom3'=>NULL,
 //        'LastUpdated'=>NULL,
 //        'MatrixProduct'=>NULL,
-//        'ManageStock'=>NULL,
-        'MasterPOSPrice'=>'price',
-        'RRP'=>'msrp',
-//        'DefaultPrice'=>'price',
-        'DiscountedPrice'=>'special_price',
+//        'DefaultPrice'=>NULL,
 //        'CustomerDiscountedPrice'=>NULL,
-//        'TaxRate'=>FALSE,
-        'Taxable'=>'taxable',
-//        'ChannelId'=>NULL
     );
     /** @var array $this->configurableAttributesToRemove */
     protected $configurableAttributesToRemove = array('SizeId', 'ColourId');
@@ -324,7 +327,11 @@ class ProductGateway extends AbstractGateway
                     )
                 );
 
-                $productData = $this->getMappedData($this->productAttributeMap, $retailExpressProductData);
+                $productData = array_replace_recursive(
+                    $this->getMappedData($this->productAttributeMap, $retailExpressProductData),
+                    $this->getMappedData($this->productAttributeMapOptional, $retailExpressProductData, FALSE)
+                );
+
                 try{
                     $product = $this->processProductUpdate(
                         $productId,
@@ -404,9 +411,10 @@ class ProductGateway extends AbstractGateway
 /**
      * @param array $map
      * @param array $data
+     * @param bool|TRUE $required
      * @return array $mappedData
      */
-    protected function getMappedData(array $map, array $data)
+    protected function getMappedData(array $map, array $data, $required = TRUE)
     {
         $mappedData = $this->mappedDataPreset;
 
@@ -443,7 +451,7 @@ class ProductGateway extends AbstractGateway
                         foreach ($code as $c) {
                             $mappedData[$c] = $value;
                         }
-                    }else{
+                    }elseif ($required) {
                         $this->getServiceLocator()->get('logService')
                             ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error,
                                 array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'data'=>$data));
