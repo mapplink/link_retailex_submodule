@@ -248,7 +248,8 @@ class CustomerGateway extends AbstractGateway
 
             if ($type == \Entity\Update::TYPE_CREATE) {
                 if (!$localId) {
-                    $message = 'Error creating customer in Retailex ('.$entity->getUniqueId().'! No local id.';
+                    $message = 'Error creating customer in Retailex ('.$entity->getUniqueId().'!'
+                        .' Response did not contain a local id.';
                     $this->getServiceLocator()->get('logService')
                         ->log(LogService::LEVEL_ERROR, 'rex_cu_wr_locerr', $message, $logData);
                 }else{
