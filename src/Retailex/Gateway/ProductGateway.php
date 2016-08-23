@@ -542,9 +542,8 @@ class ProductGateway extends AbstractGateway
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $localId);
 
                 if ($relink) {
-                    // ToDo: Downgrade to LEVEL_WARN
                     $this->getServiceLocator()->get('logService')
-                        ->log(LogService::LEVEL_ERROR, 'rex_p_re_relink',
+                        ->log(LogService::LEVEL_WARN, 'rex_p_re_relink',
                             'Incorrectly linked product/stockitem '.$sku.'. Re-linked now.',
                             array('code'=>$sku, 'wrong local id'=>$storedLocalId, 'correct local id'=>$localId),
                             array('node'=>$this->_node, 'entity'=>$existingEntity)
