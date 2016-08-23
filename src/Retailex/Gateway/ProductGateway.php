@@ -523,9 +523,10 @@ class ProductGateway extends AbstractGateway
                     );
             }
         }else{
-            $noneOrWrongLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
+            $storedLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
+            $noneOrWrongLocalId = ($localId != $storedLocalId);
 
-            if ($noneOrWrongLocalId != NULL) {
+            if ($noneOrWrongLocalId) {
                 $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $localId);
 
@@ -535,10 +536,11 @@ class ProductGateway extends AbstractGateway
                 }
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $localId);
 
+                // ToDo: Downgrade to LEVEL_WARN
                 $this->getServiceLocator()->get('logService')
                     ->log(LogService::LEVEL_ERROR, 'rex_p_relink',
-                        'Incorrectly linked product '.$sku.' ('.$noneOrWrongLocalId.'). Re-linked now.',
-                        array('code'=>$sku, 'wrong local id'=>$noneOrWrongLocalId),
+                        'Incorrectly linked product '.$sku.'. Re-linked now.',
+                        array('code'=>$sku, 'wrong local id'=>$storedLocalId, 'correct local id'=>$localId),
                         array('node'=>$this->_node, 'entity'=>$existingEntity)
                     );
             }
