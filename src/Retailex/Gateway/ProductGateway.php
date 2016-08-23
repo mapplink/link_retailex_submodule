@@ -527,7 +527,8 @@ class ProductGateway extends AbstractGateway
             $noneOrWrongLocalId = ($localId != $storedLocalId);
 
             if ($noneOrWrongLocalId) {
-                if (!is_null($storedLocalId)) {
+                $relink = !is_null($storedLocalId);
+                if ($relink) {
                     $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
                 }
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $localId);
@@ -535,26 +536,29 @@ class ProductGateway extends AbstractGateway
                 $stockEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', 0, $sku);
 
                 if (!is_null($this->_entityService->getLocalId($this->_node->getNodeId(), $stockEntity))) {
+                    $relink = TRUE;
                     $this->_entityService->unlinkEntity($this->_node->getNodeId(), $stockEntity);
                 }
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $localId);
 
-                // ToDo: Downgrade to LEVEL_WARN
-                $this->getServiceLocator()->get('logService')
-                    ->log(LogService::LEVEL_ERROR, 'rex_p_re_relink',
-                        'Incorrectly linked product '.$sku.'. Re-linked now.',
-                        array('code'=>$sku, 'wrong local id'=>$storedLocalId, 'correct local id'=>$localId),
-                        array('node'=>$this->_node, 'entity'=>$existingEntity)
-                    );
+                if ($relink) {
+                    // ToDo: Downgrade to LEVEL_WARN
+                    $this->getServiceLocator()->get('logService')
+                        ->log(LogService::LEVEL_ERROR, 'rex_p_re_relink',
+                            'Incorrectly linked product '.$sku.'. Re-linked now.',
+                            array('code'=>$sku, 'wrong local id'=>$storedLocalId, 'correct local id'=>$localId),
+                            array('node'=>$this->_node, 'entity'=>$existingEntity)
+                        );
+                }
             }
 
             $this->getServiceLocator()->get('logService')
-                    ->log(LogService::LEVEL_INFO,
-                        'rex_p_re_upd',
-                        'Updated product '.$sku,
-                        array('sku'=>$sku),
-                        array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
-                    );
+                ->log(LogService::LEVEL_INFO,
+                    'rex_p_re_upd',
+                    'Updated product '.$sku,
+                    array('sku'=>$sku),
+                    array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
+                );
         }
 
         if ($needsUpdate) {
