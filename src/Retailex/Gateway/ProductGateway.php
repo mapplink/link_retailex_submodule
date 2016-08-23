@@ -527,11 +527,14 @@ class ProductGateway extends AbstractGateway
             $noneOrWrongLocalId = ($localId != $storedLocalId);
 
             if ($noneOrWrongLocalId) {
-                $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
+                if (!is_null($storedLocalId)) {
+                    $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
+                }
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $localId);
 
                 $stockEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', 0, $sku);
-                if ($this->_entityService->getLocalId($this->_node->getNodeId(), $stockEntity) != null) {
+
+                if (!is_null($this->_entityService->getLocalId($this->_node->getNodeId(), $stockEntity))) {
                     $this->_entityService->unlinkEntity($this->_node->getNodeId(), $stockEntity);
                 }
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $localId);
