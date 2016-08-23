@@ -155,7 +155,7 @@ class OrderGateway extends AbstractGateway
                 $logData['response'] = $response;
 
                 $orderResponse = current($response->xpath('//Order'));
-                $success = $orderResponse['Result'] == 'Success';
+                $success = ($orderResponse['Result'] == 'Success');
             }catch(\Exception $exception){
                 throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                 $success = FALSE;
@@ -235,9 +235,9 @@ class OrderGateway extends AbstractGateway
                             $response = $this->soap->call($call, $data);
                             $logData['response'] = $response;
 
-                            $result = current($response->xpath('//Result'));
-                            $logData['response result'] = $result;
-                            $success = (strtolower($result) == 'success');
+                            $resultResponse = current($response->xpath('//Result'));
+                            $logData['response result'] = $resultResponse;
+                            $success = ($resultResponse == 'Success');
                         }catch(\Exception $exception) {
                             throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                         }
@@ -275,9 +275,9 @@ class OrderGateway extends AbstractGateway
                             $response = $this->soap->call($call, $data);
                             $logData['response'] = $response;
 
-                            $result = current($response->xpath('//Result'));
-                            $logData['response result'] = $result;
-                            $success = (strtolower($result) == 'success');
+                            $resultResponse = current($response->xpath('//Result'));
+                            $logData['response result'] = $resultResponse;
+                            $success = ($resultResponse == 'Success');
                         }catch(\Exception $exception){
                             throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                         }
