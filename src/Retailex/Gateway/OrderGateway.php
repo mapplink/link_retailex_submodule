@@ -373,6 +373,15 @@ class OrderGateway extends AbstractGateway
     }
 
     /**
+     * @param int $customerId
+     * @return int $localCustomerId
+     */
+    protected function getLocalCustomer($customerId)
+    {
+        return $this->_entityService->getLocalId($this->_node->getNodeId(), $customerId);
+    }
+
+    /**
      * @param Order $order
      * @param array $data
      * @param string $localCode
