@@ -163,9 +163,9 @@ class OrderGateway extends AbstractGateway
                     $message = '';
                 }
             }catch(\Exception $exception){
+                $message = ': '.$exception->getMessage();
                 throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                 $success = FALSE;
-                $message = $exception->getMessage();
             }
 
             if ($success) {
@@ -187,14 +187,17 @@ class OrderGateway extends AbstractGateway
             }else{
                 $logLevel = LogService::LEVEL_ERROR;
                 $logCode .= 'fail';
-                $message = trim('Failed to create order. '.$message);
+                $message = trim('Failed to create order '.$entity->getUniqueId().$message);
+                throw new GatewayException($message);
             }
             $logData['order response'] = $orderResponse;
         }else{
             $logLevel = LogService::LEVEL_ERROR;
             $logCode .= 'err';
-            $message = 'Could not create order because it seems to exist already (local id is existing).';
             $logData['local id'] = $localId;
+            $message = 'Could not create order because it seems to exist already. Local id is existing';
+            throw new GatewayException($message.': '.$localId);
+            $success = FALSE;
         }
 
         $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $message, $logData);
