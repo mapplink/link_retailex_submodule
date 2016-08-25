@@ -407,6 +407,7 @@ class OrderGateway extends AbstractGateway
                 $createData[$subcode] = $value;
             }
         }else{
+            $createData = NULL;
             $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR, 'rex_o_wr_map_err', $error,
                 array('local code'=>$localCode, 'code'=>$code, 'order'=>$order->getUniqueId()));
         }
