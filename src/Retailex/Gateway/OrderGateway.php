@@ -18,6 +18,7 @@ use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
 use Magelink\Exception\NodeException;
 use Magelink\Exception\GatewayException;
+use Magelink\Exception\SyncException;
 use Node\AbstractNode;
 use Magento2\Gateway\OrderGateway as Magento2OrderGateway;
 use Zend\Stdlib\ArrayObject;
@@ -147,15 +148,19 @@ class OrderGateway extends AbstractGateway
             $success = FALSE;
 
         }elseif (!isset($localId)) {
-            $call = 'Order CreateByChannel';
+            $call = 'OrderCreateByChannel';
             $data = array('OrderXML'=>array('Orders'=>array('Order'=>$this->getOrderCreateData($entity))));
 
             try{
                 $response = $this->soap->call($call, $data);
                 $logData['response'] = $response;
 
-                $orderResponse = current($response->xpath('//Order'));
-                $success = ($orderResponse['Result'] == 'Success');
+                if (is_null($response)) {
+                    throw new SyncException($call.' returned NULL.');
+                }else{
+                    $orderResponse = current($response->xpath('//Order'));
+                    $success = ($orderResponse['Result'] == 'Success');
+                }
             }catch(\Exception $exception){
                 throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                 $success = FALSE;
