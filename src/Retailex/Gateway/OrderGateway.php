@@ -160,30 +160,36 @@ class OrderGateway extends AbstractGateway
                 }else{
                     $orderResponse = current($response->xpath('//Order'));
                     $success = ($orderResponse['Result'] == 'Success');
+                    $message = '';
                 }
             }catch(\Exception $exception){
                 throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                 $success = FALSE;
+                $message = $exception->getMessage();
             }
 
             if ($success) {
                 $message = 'Successfully created order on node '.$nodeId;
                 if (isset($orderResponse['OrderId'])) {
                     $localId = $orderResponse['OrderId'];
+                    $logLevel = LogService::LEVEL_INFO;
                     $logCode .= 'suc';
                     $message .= ' with local id.';
                     $logData['local id'] = $localId;
                 }else{
                     $localId = NULL;
+                    $logLevel = LogService::LEVEL_WARN;
                     $logCode .= 'nolcid';
                     $message .= ' but response did not contain local id.';
                 }
 
                 $this->_entityService->linkEntity($nodeId, $entity, $localId);
-
-                $logLevel = LogService::LEVEL_INFO;
-                $logData['order response'] = $orderResponse;
+            }else{
+                $logLevel = LogService::LEVEL_ERROR;
+                $logCode .= 'fail';
+                $message = trim('Failed to create order. '.$message);
             }
+            $logData['order response'] = $orderResponse;
         }else{
             $logLevel = LogService::LEVEL_ERROR;
             $logCode .= 'err';
