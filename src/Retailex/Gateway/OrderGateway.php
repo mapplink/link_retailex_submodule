@@ -166,7 +166,6 @@ class OrderGateway extends AbstractGateway
                 }
             }catch(\Exception $exception){
                 $message = ': '.$exception->getMessage();
-                throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                 $success = FALSE;
             }
 
@@ -190,7 +189,6 @@ class OrderGateway extends AbstractGateway
                 $logLevel = LogService::LEVEL_ERROR;
                 $logCode .= 'fail';
                 $message = trim('Failed to create order '.$entity->getUniqueId().$message);
-                throw new GatewayException($message);
             }
             $logData['order response'] = $orderResponse;
         }else{
@@ -198,11 +196,14 @@ class OrderGateway extends AbstractGateway
             $logCode .= 'err';
             $logData['local id'] = $localId;
             $message = 'Could not create order because it seems to exist already. Local id is existing';
-            throw new GatewayException($message.': '.$localId);
             $success = FALSE;
         }
 
         $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $message, $logData);
+
+        if (!$success) {
+            throw new GatewayException($message);
+        }
 
         return $success;
     }
@@ -219,9 +220,6 @@ class OrderGateway extends AbstractGateway
     {
         $logCode = 'rex_o_wa';
         $success = FALSE;
-
-        $this->getServiceLocator()->get('logService')
-            ->log(LogService::LEVEL_INFO, $logCode.'_no', 'Order write action not implemented yet.', array());
 
         if (!$this->soap) {
             throw new NodeException('No valid API available for sync');
