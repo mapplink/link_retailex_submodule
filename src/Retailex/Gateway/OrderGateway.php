@@ -33,7 +33,7 @@ class OrderGateway extends AbstractGateway
     protected $createOrderAttributeMap = array(
 //        'ExternalOrderId'=>'UNIQUE_ID',
         'DateCreated'=>'placed_at',
-        'OrderTotal'=>array('getOrderTotal'),
+        'OrderTotal'=>array('{order}'=>'getOrderTotal'),
         'OrderStatus'=>array('status'=>'getRetailExpressStatus'),
         'CustomerId'=>array('customer'=>'getLocalCustomer'),
         'ExternalCustomerId'=>'customer',
@@ -385,8 +385,10 @@ class OrderGateway extends AbstractGateway
                 if (method_exists('Retailex\Gateway\OrderGateway', $method)) {
                     if (is_numeric($code)) {
                         $value = self::$method();
+                    }elseif  ($code == '{order}') {
+                        $value = self::$method($order);
                     }else{
-                        $value = self::$method($order->getData($code, null));
+                        $value = self::$method($order->getData($code, NULL));
                     }
                 }else{
                     $error = 'Mapping method '.$method.' is not existing.';
