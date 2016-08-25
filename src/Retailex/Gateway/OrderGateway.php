@@ -421,19 +421,29 @@ class OrderGateway extends AbstractGateway
      */
     protected function getOrderCreateData(Order $order)
     {
-        $billingAddress = $order->getBillingAddressEntity();
-        $shippingAddress = $order->getShippingAddressEntity();
+        $logCode = $this->getLogCode();
+        $logData = array('order'=>$order->getUniqueId());
 
         $createData = array();
-
         foreach ($this->createOrderAttributeMap as $localCode=>$code) {
             $this->assignData($order, $createData, $localCode, $code);
         }
-        foreach ($this->createOrderBillingAttributeMapping as $localCode=>$code) {
-            $createData[$localCode] = $billingAddress->getData($code, NULL);
+
+        if (is_null($billingAddress = $order->getBillingAddressEntity())) {
+            $this->getServiceLocator()->get('logService')
+                ->log(LogService::LEVEL_ERROR, $logCode.'_bad_err', 'Billing address missing.', $logData);
+        }else{
+            foreach ($this->createOrderBillingAttributeMapping as $localCode => $code) {
+                $createData[$localCode] = $billingAddress->getData($code, null);
+            }
         }
-        foreach ($this->createOrderShippingAttributeMapping as $localCode=>$code) {
-            $createData[$localCode] = $shippingAddress->getData($code, NULL);
+        if (is_null($shippingAddress = $order->getShippingAddressEntity())) {
+            $this->getServiceLocator()->get('logService')
+                ->log(LogService::LEVEL_ERROR, $logCode.'_sad_err', 'Shipping address missing.', $logData);
+        }else{
+            foreach ($this->createOrderShippingAttributeMapping as $localCode=>$code) {
+                $createData[$localCode] = $shippingAddress->getData($code, NULL);
+            }
         }
 
         return $createData;
