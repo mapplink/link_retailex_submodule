@@ -10,18 +10,13 @@
 
 namespace Retailex\Gateway;
 
-use Entity\Comment;
-use Entity\Service\EntityService;
 use Entity\Wrapper\Order;
-use Entity\Wrapper\Orderitem;
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
 use Magelink\Exception\NodeException;
 use Magelink\Exception\GatewayException;
 use Magelink\Exception\SyncException;
-use Node\AbstractNode;
 use Magento2\Gateway\OrderGateway as Magento2OrderGateway;
-use Zend\Stdlib\ArrayObject;
 
 
 class OrderGateway extends AbstractGateway
