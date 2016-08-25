@@ -409,13 +409,13 @@ class OrderGateway extends AbstractGateway
                         $value = self::$method($order->getData($code, NULL));
                     }
                 }else{
-                    $error = 'Mapping method '.$method.' is not existing.';
+                    $error = '. Mapping method '.$method.' is not existing.';
                 }
             }catch (\Exception $exception) {
-                $error = $exception->getMessage();
+                $error = ': '.$exception->getMessage();
             }
         }else{
-            $error = 'Error on order data mapping.';
+            $error = ' with code '.$code.'.';
         }
 
         if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
@@ -425,9 +425,9 @@ class OrderGateway extends AbstractGateway
                 $data[$subcode] = $value;
             }
         }else{
-            $data = NULL;
-            $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR, 'rex_o_wr_map_err', $error,
-                array('local code'=>$localCode, 'code'=>$code, 'order'=>$order->getUniqueId()));
+            $message = 'Error on order data mapping'.(isset($error) ? $error : '.');
+            $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR, 'rex_o_wr_map_err', $message,
+                array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'order'=>$order->getUniqueId()));
         }
 
         return $data;
