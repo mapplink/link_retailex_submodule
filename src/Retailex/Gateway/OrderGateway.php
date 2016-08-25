@@ -151,6 +151,8 @@ class OrderGateway extends AbstractGateway
             $call = 'OrderCreateByChannel';
             $data = array('OrderXML'=>array('Orders'=>array('Order'=>$this->getOrderCreateData($entity))));
 
+            $logData['soap data'] = $data;
+
             try{
                 $response = $this->soap->call($call, $data);
                 $logData['response'] = $response;
@@ -353,7 +355,7 @@ class OrderGateway extends AbstractGateway
      */
     protected function getOrderTotal(Order $order)
     {
-        return $order->getOrderTotal();
+        return $order->getOrderTotalInclShipping();
     }
 
     /**
@@ -384,12 +386,12 @@ class OrderGateway extends AbstractGateway
      * @param mixed $code
      * @return array $value
      */
-    protected function assignData($order, &$data, $localCode, $code)
+    protected function assignData(Order $order, &$data, $localCode, $code)
     {
         $error = FALSE;
 
         if (is_string($code) || is_array($code) && count($code) > 1) {
-            $createData[$localCode] = $order->getData($code, NULL);;
+            $data[$localCode] = $order->getData($code, NULL);;
         }elseif (is_array($code) && count($code) == 1) {
             $method = current($code);
             $code = key($code);
@@ -415,18 +417,18 @@ class OrderGateway extends AbstractGateway
         }
 
         if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
-            $createData[$code] = $value;
+            $data[$code] = $value;
         }elseif (is_array($code) && count($code) > 1 && isset($value) && !isset($error)) {
             foreach ($code as $subcode) {
-                $createData[$subcode] = $value;
+                $data[$subcode] = $value;
             }
         }else{
-            $createData = NULL;
+            $data = NULL;
             $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR, 'rex_o_wr_map_err', $error,
                 array('local code'=>$localCode, 'code'=>$code, 'order'=>$order->getUniqueId()));
         }
 
-        return $createData;
+        return $data;
     }
 
     /**
