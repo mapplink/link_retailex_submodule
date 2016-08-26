@@ -28,7 +28,7 @@ class OrderGateway extends AbstractGateway
     /** @var array $this->billingAttributeMapping */
     protected $createOrderAttributeMap = array(
 //        'ExternalOrderId'=>'UNIQUE_ID',
-        'DateCreated'=>'placed_at',
+        'DateCreated'=>array('placed_at'=>'getDateCreated'),
         'OrderTotal'=>array('{order}'=>'getOrderTotal'),
         'OrderStatus'=>array('status'=>'getRetailExpressStatus'),
         'CustomerId'=>array('customer'=>'getLocalCustomer'),
@@ -344,6 +344,18 @@ class OrderGateway extends AbstractGateway
     }
 
     /**
+     * @param string $placedAt
+     * @return string $dateCreated
+     */
+    protected function getDateCreated($placedAt)
+    {
+        $timestamp = strtotime($placedAt);
+        $dateCreated = $this->convertTimestampToRetailexDateFormat($timestamp);
+
+        return $dateCreated;
+    }
+
+    /**
      * @param Order $order
      * @return float $orderTotal
      */
@@ -444,7 +456,6 @@ class OrderGateway extends AbstractGateway
         foreach ($this->createOrderAttributeMap as $localCode=>$code) {
             $this->assignData($order, $createData, $localCode, $code);
         }
-
         if (is_null($billingAddress = $order->getBillingAddressEntity())) {
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_ERROR, $logCode.'_bad_err', 'Billing address missing.', $logData);
