@@ -162,6 +162,7 @@ class OrderGateway extends AbstractGateway
             }catch(\Exception $exception){
                 $message = ': '.$exception->getMessage();
                 $success = FALSE;
+                $orderResponse = NULL;
             }
 
             if ($success) {
@@ -390,10 +391,10 @@ class OrderGateway extends AbstractGateway
      */
     protected function assignData(Order $order, &$data, $localCode, $code)
     {
-        $error = FALSE;
+        $error = '';
 
-        if (is_string($code) || is_array($code) && count($code) > 1) {
-            $data[$localCode] = $order->getData($code, NULL);;
+        if (is_string($code)) {
+            $value = $order->getData($code, NULL);
         }elseif (is_array($code) && count($code) == 1) {
             $method = current($code);
             $code = key($code);
@@ -415,17 +416,14 @@ class OrderGateway extends AbstractGateway
                 $error = ': '.$exception->getMessage();
             }
         }else{
-            $error = ' with code '.$code.'.';
+            $error = ' with code '.var_export($code, TRUE).'.';
+            $value = NULL;
         }
 
-        if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
-            $data[$code] = $value;
-        }elseif (is_array($code) && count($code) > 1 && isset($value) && !isset($error)) {
-            foreach ($code as $subcode) {
-                $data[$subcode] = $value;
-            }
+        if (is_string($localCode) && strlen($localCode) > 0 && isset($value) && strlen($error) == 0) {
+            $data[$localCode] = $value;
         }else{
-            $message = 'Error on order data mapping'.(isset($error) ? $error : '.');
+            $message = 'Error on order data mapping'.(strlen($error) > 0 ? $error : '.');
             $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR, 'rex_o_wr_map_err', $message,
                 array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'order'=>$order->getUniqueId()));
         }
@@ -451,8 +449,8 @@ class OrderGateway extends AbstractGateway
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_ERROR, $logCode.'_bad_err', 'Billing address missing.', $logData);
         }else{
-            foreach ($this->createOrderBillingAttributeMapping as $localCode => $code) {
-                $createData[$localCode] = $billingAddress->getData($code, null);
+            foreach ($this->createOrderBillingAttributeMapping as $localCode=>$code) {
+                $createData[$localCode] = $billingAddress->getData($code, NULL);
             }
         }
         if (is_null($shippingAddress = $order->getShippingAddressEntity())) {
