@@ -144,8 +144,7 @@ class OrderGateway extends AbstractGateway
      */
     public function writeUpdates(\Entity\Entity $entity, $attributes, $type = \Entity\Update::TYPE_UPDATE)
     {
-        $nodeId = $this->_node->getNodeId();
-        $localId = $this->_entityService->getLocalId($nodeId, $entity);
+        $localId = $this->getLocalId($entity);
         $orderStatus = $entity->getData('status', NULL);
 
         $logCode = $this->getLogCode().'_wr_';
@@ -179,7 +178,7 @@ class OrderGateway extends AbstractGateway
             }
 
             if ($success) {
-                $message = 'Successfully created order on node '.$nodeId;
+                $message = 'Successfully created order on node '.$this->_node->getNodeId();
                 if (isset($orderResponse['OrderId'])) {
                     $localId = $orderResponse['OrderId'];
                     $logLevel = LogService::LEVEL_INFO;
@@ -193,7 +192,7 @@ class OrderGateway extends AbstractGateway
                     $message .= ' but response did not contain local id.';
                 }
 
-                $this->_entityService->linkEntity($nodeId, $entity, $localId);
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $entity, $localId);
             }else{
                 $logLevel = LogService::LEVEL_ERROR;
                 $logCode .= 'fail';
@@ -345,6 +344,11 @@ class OrderGateway extends AbstractGateway
         return $success;
     }
 
+    protected function getLocalId(Entity $entity)
+    {
+        return $this->_entityService->getLocalId($this->_node->getNodeId(), $entity);
+    }
+
     /**
      * @param int $methodString
      * @return int|NULL $methodId
@@ -437,35 +441,39 @@ class OrderGateway extends AbstractGateway
 
         if (is_numeric($code)) {
             $value = $code;
+
         }elseif (is_string($code)) {
             $value = $entity->getData($code, NULL);
+
         }elseif (is_array($code) && count($code) == 1) {
             $method = current($code);
             $code = key($code);
             $value = NULL;
 
             try{
-                if (method_exists('Retailex\Gateway\OrderGateway', $method)) {
-                    if (is_numeric($code)) {
-                        $value = self::$method();
-                    }elseif ($code == '{entity}') {
-                        if (method_exists($entity, $method)) {
-                            $value = $entity->$method();
-                        }else{
-                            $value = self::$method($entity);
-                        }
-                    }elseif ($code == '{parent}') {
-                        $parent = $entity->getParent();
-                        if (is_null($parent)) {
-                            $error = '. Parent is not defined.';
-                        }elseif (method_exists($parent, $method)) {
-                            $value = $parent->$method();
-                        }else{
-                            $value = self::$method($parent);
-                        }
-                    }else{
-                        $value = self::$method($entity->getData($code, NULL));
-                    }
+                $isLocalMethod = method_exists('Retailex\Gateway\OrderGateway', $method);
+
+                if ($code == '{parent}' && is_null($parent = $entity->getParent())) {
+                    $error = '. Parent is not defined.';
+
+                }elseif ($code == '{parent}' && method_exists($parent, $method)) {
+                    $value = $parent->$method();
+
+                }elseif ($code == '{parent}' && $isLocalMethod){
+                    $value = self::$method($parent);
+
+                }elseif ($code == '{entity}' && method_exists($entity, $method)) {
+                    $value = $entity->$method();
+
+                }elseif ($code == '{entity}' && $isLocalMethod) {
+                    $value = self::$method($entity);
+
+                }elseif (is_numeric($code) && method_exists('Retailex\Gateway\OrderGateway', $method)) {
+                    $value = self::$method();
+
+                }elseif (preg_match('#^\{.*\}$#ism', $code, $match) && $isLocalMethod) {
+                    $value = self::$method($entity->getData($code, NULL));
+
                 }else{
                     $error = '. Mapping method '.$method.' is not existing.';
                 }
