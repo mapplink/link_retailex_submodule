@@ -65,7 +65,7 @@ class OrderGateway extends AbstractGateway
         'QtyFulfilled'=>0,
         'UnitPrice'=>array('{entity}'=>'getDiscountedPrice'),
         'DeliveryDueDate'=>'',
-        'DeliveryMethod'=>array('{entity}'=>'getOrderShippingMethod'),
+        'DeliveryMethod'=>array('{entity}'=>'getShipmentMethod'),
         'DeliveryDriverName'=>'',
         'TaxRateApplied'=>0.15,
     );
@@ -383,14 +383,14 @@ class OrderGateway extends AbstractGateway
      * @param Orderitem $orderitem
      * @return string $shippingMethod
      */
-    protected function getOrderShippingMethod(Orderitem $orderitem)
+    protected function getShipmentMethod(Orderitem $orderitem)
     {
         $order = $orderitem->getOrder();
 
         if (!$orderitem->getData('is_physical', TRUE)) {
             $shippingMethod = '';
         }elseif ($order) {
-            $shippingMethod = $order->getOrderShippingMethod();
+            $shippingMethod = $order->getShipmentMethod();
         }else {
             $shippingMethod = 'home';
         }
