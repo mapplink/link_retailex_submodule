@@ -435,7 +435,9 @@ class OrderGateway extends AbstractGateway
     {
         $error = '';
 
-        if (is_string($code)) {
+        if (is_numeric($code)) {
+            $value = $code;
+        }elseif (is_string($code)) {
             $value = $entity->getData($code, NULL);
         }elseif (is_array($code) && count($code) == 1) {
             $method = current($code);
