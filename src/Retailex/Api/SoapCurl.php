@@ -252,6 +252,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
                 }
 
                 $logData = array(
+                    'call'=>$call,
                     'data'=>$data,
                     'options'=>$this->curlOptions,
                     'curl info'=>curl_getinfo($this->curlHandle)
@@ -276,7 +277,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
                     $hasBody = isset($responseMatches[1]) && strlen($responseMatches[1]) > 0;
                     $hasFaults = isset($soapFaultMatches[1]) && strlen($soapFaultMatches[1]) > 0;
 
-                    if (!$hasBody && !$hasFaults) {
+                    if (!$hasBody && !$hasFaults && strlen($response) > 0) {
                         if ($unGzipped = @gzdecode($response)) {
                             $soapFaultMatches = NULL;
                             $response = $unGzipped;
