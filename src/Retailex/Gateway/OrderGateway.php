@@ -387,7 +387,7 @@ class OrderGateway extends AbstractGateway
     {
         $order = $orderitem->getOrder();
 
-        if ($orderitem->getData('is_virtual', FALSE)) {
+        if (!$orderitem->getData('is_physical', TRUE)) {
             $shippingMethod = '';
         }elseif ($order) {
             $shippingMethod = $order->getOrderShippingMethod();
