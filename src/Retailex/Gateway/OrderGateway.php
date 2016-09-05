@@ -29,35 +29,35 @@ class OrderGateway extends AbstractGateway
 
     /** @var array $this->billingAttributeMapping */
     protected $createOrderAttributeMap = array(
-//        'ExternalOrderId'=>'UNIQUE_ID',
+//        'ExternalOrderId'=>array('UNIQUE_ID'=>NULL),
         'DateCreated'=>array('placed_at'=>'getDateCreated'),
         'OrderTotal'=>array('{entity}'=>'getOrderTotal'),
         'OrderStatus'=>array('status'=>'getRetailExpressStatus'),
         'CustomerId'=>array('customer'=>'getLocalCustomer'),
-        'ExternalCustomerId'=>'customer',
-        'BillEmail'=>'customer_email',
+        'ExternalCustomerId'=>array('customer'),
+        'BillEmail'=>array('customer_email'),
         'ReceiverNews'=>0
     );
     /** @var array $this->billingAttributeMapping */
     protected $createOrderBillingAttributeMap = array(
-        'BillFirstName'=>'first_name',
-        'BillLastName'=>'last_name',
-        //'BillAddress'=>'street',
-        'BillCompany'=>'company',
-        'BillPhone'=>'telephone',
-        'BillPostCode'=>'postcode',
-        'BillState'=>'region',
-        'BillCountry'=>'country_code'
+        'BillFirstName'=>array('first_name'),
+        'BillLastName'=>array('last_name'),
+        //'BillAddress'=>array('street'),
+        'BillCompany'=>array('company'),
+        'BillPhone'=>array('telephone'),
+        'BillPostCode'=>array('postcode'),
+        'BillState'=>array('region'),
+        'BillCountry'=>array('country_code')
     );
     /** @var array $this->shippingAttributeMapping */
     protected $createOrderShippingAttributeMap = array(
-        'DelCompany'=>'company',
-        //'DelAddress'=>'street',
-        //'DelSuburb'=>'street',
-        'DelPhone'=>'telephone',
-        'DelPostCode'=>'postcode',
-        'DelState'=>'region',
-        'DelCountry'=>'country_code'
+        'DelCompany'=>array('company'),
+        //'DelAddress'=>array('street'),
+        //'DelSuburb'=>array('street'),
+        'DelPhone'=>array('telephone'),
+        'DelPostCode'=>array('postcode'),
+        'DelState'=>array('region'),
+        'DelCountry'=>array('country_code')
     );
     protected $createOrderOrderitemsAttributeMap = array(
         'ProductId'=>array('{entity}'=>'getLocalId'),
@@ -432,22 +432,19 @@ class OrderGateway extends AbstractGateway
      * @param Entity $entity
      * @param array $data
      * @param string $localCode
-     * @param mixed $code
-     * @return array $value
+     * @param mixed $value
+     * @return array $data
      */
-    protected function assignData(Entity $entity, &$data, $localCode, $code)
+    protected function assignData(Entity $entity, &$data, $localCode, $value)
     {
         $error = '';
 
-        if (is_numeric($code)) {
-            $value = $code;
-
-        }elseif (is_string($code)) {
+        if (is_array($value) && is_int(key($value)) && is_string($code = current($value))) {
             $value = $entity->getData($code, NULL);
 
-        }elseif (is_array($code) && count($code) == 1) {
-            $method = current($code);
-            $code = key($code);
+        }elseif (is_array($value) && count($code) == 1) {
+            $code = key($value);
+            $method = current($value);
             $value = NULL;
 
             try{
@@ -471,7 +468,7 @@ class OrderGateway extends AbstractGateway
                 }elseif (is_numeric($code) && method_exists('Retailex\Gateway\OrderGateway', $method)) {
                     $value = self::$method();
 
-                }elseif (preg_match('#^\{.*\}$#ism', $code, $match) && $isLocalMethod) {
+                }elseif (!preg_match('#^\{.*\}$#ism', $code, $match) && $isLocalMethod) {
                     $value = self::$method($entity->getData($code, NULL));
 
                 }else{
@@ -480,8 +477,9 @@ class OrderGateway extends AbstractGateway
             }catch (\Exception $exception) {
                 $error = ': '.$exception->getMessage();
             }
-        }else{
-            $error = ' with code '.var_export($code, TRUE).'.';
+
+        }elseif (!is_int($value) && !is_string($value)) {
+            $error = ' with code/value '.var_export($value, TRUE).'.';
             $value = NULL;
         }
 
