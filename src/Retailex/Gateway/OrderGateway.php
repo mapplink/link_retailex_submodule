@@ -448,7 +448,8 @@ class OrderGateway extends AbstractGateway
     {
         $error = '';
         $logData = array('entity type'=>$entity->getTypeStr(), 'entity unique id'=>$entity->getUniqueId(),
-            'data (param)'=>$data, 'local code'=>$localCode, 'value (param)'=>$value);
+            'local code'=>$localCode, 'value (param)'=>$value);
+
 
         if (is_array($value) && is_int(key($value)) && is_string($code = current($value))) {
             $logData['code'] = $code;
@@ -477,7 +478,7 @@ class OrderGateway extends AbstractGateway
                 }elseif ($code == '{entity}' && method_exists($entity, $method)) {
                     $value = $entity->$method();
 
-                }elseif (is_numeric($code) && method_exists('Retailex\Gateway\OrderGateway', $method)) {
+                }elseif (strlen($code) == 0 && $isLocalMethod) {
                     $value = self::$method();
 
                 }elseif (!preg_match('#^\{.*\}$#ism', $code, $match) && $isLocalMethod) {
@@ -495,11 +496,10 @@ class OrderGateway extends AbstractGateway
             $code = $value = NULL;
         }
 
-        $logData['value'] = $value;
+        $logData['value (return)'] = $value;
 
         if (is_string($localCode) && strlen($localCode) > 0 && isset($value) && strlen($error) == 0) {
             $data[$localCode] = $value;
-            $logData['data'] = $data;
         }else{
             $message = 'Error on entity data mapping'.(strlen($error) > 0 ? $error : '.');
             $this->getServiceLocator()->get('logService')
