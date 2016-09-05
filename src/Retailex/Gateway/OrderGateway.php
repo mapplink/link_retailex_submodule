@@ -10,7 +10,9 @@
 
 namespace Retailex\Gateway;
 
+use Entity\Entity;
 use Entity\Wrapper\Order;
+use Entity\Wrapper\Orderitem;
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
 use Magelink\Exception\NodeException;
@@ -29,7 +31,7 @@ class OrderGateway extends AbstractGateway
     protected $createOrderAttributeMap = array(
 //        'ExternalOrderId'=>'UNIQUE_ID',
         'DateCreated'=>array('placed_at'=>'getDateCreated'),
-        'OrderTotal'=>array('{order}'=>'getOrderTotal'),
+        'OrderTotal'=>array('{entity}'=>'getOrderTotal'),
         'OrderStatus'=>array('status'=>'getRetailExpressStatus'),
         'CustomerId'=>array('customer'=>'getLocalCustomer'),
         'ExternalCustomerId'=>'customer',
@@ -37,7 +39,7 @@ class OrderGateway extends AbstractGateway
         'ReceiverNews'=>0
     );
     /** @var array $this->billingAttributeMapping */
-    protected $createOrderBillingAttributeMapping = array(
+    protected $createOrderBillingAttributeMap = array(
         'BillFirstName'=>'first_name',
         'BillLastName'=>'last_name',
         //'BillAddress'=>'street',
@@ -48,7 +50,7 @@ class OrderGateway extends AbstractGateway
         'BillCountry'=>'country_code'
     );
     /** @var array $this->shippingAttributeMapping */
-    protected $createOrderShippingAttributeMapping = array(
+    protected $createOrderShippingAttributeMap = array(
         'DelCompany'=>'company',
         //'DelAddress'=>'street',
         //'DelSuburb'=>'street',
@@ -57,6 +59,17 @@ class OrderGateway extends AbstractGateway
         'DelState'=>'region',
         'DelCountry'=>'country_code'
     );
+    protected $createOrderOrderitemsAttributeMap = array(
+        'ProductId'=>array('{entity}'=>'getLocalId'),
+        'QtyOrdered'=>array('{entity}'=>'getDeliveryQuantity'),
+        'QtyFulfilled'=>0,
+        'UnitPrice'=>array('{entity}'=>'getDiscountedPrice'),
+        'DeliveryDueDate'=>'',
+        'DeliveryMethod'=>array('{entity}'=>'getOrderShippingMethod'),
+        'DeliveryDriverName'=>'',
+        'TaxRateApplied'=>0.15,
+    );
+
     /** @var array $this->paymentAttributeMap */
     protected $paymentAttributeMap = array(
         'OrderId'=>array('getLocalOrderId'),
@@ -277,9 +290,7 @@ class OrderGateway extends AbstractGateway
 
                     if (isset($localId)) {
                         $call = 'OrderAddPayment';
-                        $data = array('PaymentXML'=>array('OrderPayments'=>array(
-                            'OrderPayment'=>$this->getOrderAddPaymentData($order)
-                        )));
+                        $data = array('PaymentXML'=>$this->getOrderAddPaymentData($order));
 
                         try{
                             $response = $this->soap->call($call, $data);
@@ -365,6 +376,25 @@ class OrderGateway extends AbstractGateway
     }
 
     /**
+     * @param Orderitem $orderitem
+     * @return string $shippingMethod
+     */
+    protected function getOrderShippingMethod(Orderitem $orderitem)
+    {
+        $order = $orderitem->getOrder();
+
+        if ($this->getData('is_virtual', FALSE)) {
+            $shippingMethod = '';
+        }elseif ($order) {
+            $shippingMethod = $order->getOrderShippingMethod();
+        }else {
+            $shippingMethod = 'home';
+        }
+
+        return $shippingMethod;
+    }
+
+    /**
      * @param string $status
      * @return string $retailExpressStatus
      */
@@ -395,18 +425,18 @@ class OrderGateway extends AbstractGateway
     }
 
     /**
-     * @param Order $order
+     * @param Entity $entity
      * @param array $data
      * @param string $localCode
      * @param mixed $code
      * @return array $value
      */
-    protected function assignData(Order $order, &$data, $localCode, $code)
+    protected function assignData(Entity $entity, &$data, $localCode, $code)
     {
         $error = '';
 
         if (is_string($code)) {
-            $value = $order->getData($code, NULL);
+            $value = $entity->getData($code, NULL);
         }elseif (is_array($code) && count($code) == 1) {
             $method = current($code);
             $code = key($code);
@@ -416,10 +446,23 @@ class OrderGateway extends AbstractGateway
                 if (method_exists('Retailex\Gateway\OrderGateway', $method)) {
                     if (is_numeric($code)) {
                         $value = self::$method();
-                    }elseif  ($code == '{order}') {
-                        $value = self::$method($order);
+                    }elseif ($code == '{entity}') {
+                        if (method_exists($entity, $method)) {
+                            $value = $entity->$method();
+                        }else{
+                            $value = self::$method($entity);
+                        }
+                    }elseif ($code == '{parent}') {
+                        $parent = $entity->getParent();
+                        if (is_null($parent)) {
+                            $error = '. Parent is not defined.';
+                        }elseif (method_exists($parent, $method)) {
+                            $value = $parent->$method();
+                        }else{
+                            $value = self::$method($parent);
+                        }
                     }else{
-                        $value = self::$method($order->getData($code, NULL));
+                        $value = self::$method($entity->getData($code, NULL));
                     }
                 }else{
                     $error = '. Mapping method '.$method.' is not existing.';
@@ -435,9 +478,10 @@ class OrderGateway extends AbstractGateway
         if (is_string($localCode) && strlen($localCode) > 0 && isset($value) && strlen($error) == 0) {
             $data[$localCode] = $value;
         }else{
-            $message = 'Error on order data mapping'.(strlen($error) > 0 ? $error : '.');
+            $message = 'Error on entity data mapping'.(strlen($error) > 0 ? $error : '.');
             $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR, 'rex_o_wr_map_err', $message,
-                array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'order'=>$order->getUniqueId()));
+                array('entity type'=>$entity->getTypeStr(), 'entity unique id'=>$entity->getUniqueId(),
+                    'local code'=>$localCode, 'code'=>$code, 'value'=>$value));
         }
 
         return $data;
@@ -456,24 +500,50 @@ class OrderGateway extends AbstractGateway
         foreach ($this->createOrderAttributeMap as $localCode=>$code) {
             $this->assignData($order, $createData, $localCode, $code);
         }
+
         if (is_null($billingAddress = $order->getBillingAddressEntity())) {
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_ERROR, $logCode.'_bad_err', 'Billing address missing.', $logData);
         }else{
-            foreach ($this->createOrderBillingAttributeMapping as $localCode=>$code) {
+            foreach ($this->createOrderBillingAttributeMap as $localCode=>$code) {
                 $createData[$localCode] = $billingAddress->getData($code, NULL);
             }
         }
+
         if (is_null($shippingAddress = $order->getShippingAddressEntity())) {
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_ERROR, $logCode.'_sad_err', 'Shipping address missing.', $logData);
         }else{
-            foreach ($this->createOrderShippingAttributeMapping as $localCode=>$code) {
+            foreach ($this->createOrderShippingAttributeMap as $localCode=>$code) {
                 $createData[$localCode] = $shippingAddress->getData($code, NULL);
             }
         }
 
+        $createData = array_replace_recursive(
+            $createData,
+            $this->getOrderitemData($order),
+            $this->getOrderAddPaymentData($order)
+        );
+
         return $createData;
+    }
+
+
+    protected function getOrderitemData(Order $order)
+    {
+        $orderitemsData = array();
+        $orderitemNo = 0;
+
+        foreach ($order->getOrderitems() as $orderitem) {
+            $orderitemData = array();
+            foreach ($this->createOrderOrderitemsAttributeMap as $localCode=>$code) {
+                $orderitemData[$localCode] = $this->assignData($orderitem, $orderitemData, $localCode, $code);
+            }
+            $orderitemsData['Orderitem<'.++$orderitemNo.'>'] = $orderitemData;
+        }
+        $orderitemsData = array('Orderitems'=>$orderitemsData);
+
+        return $orderitemsData;
     }
 
     /**
@@ -484,9 +554,11 @@ class OrderGateway extends AbstractGateway
     {
         $paymentData = array();
 
-        foreach ($this->createOrderBillingAttributeMapping as $localCode=>$code) {
+        foreach ($this->paymentAttributeMap as $localCode=>$code) {
             $this->assignData($order, $paymentData, $localCode, $code);
         }
+
+        $paymentData = array('OrderPayments'=>array('OrderPayment'=>$paymentData));
 
         return $paymentData;
     }
