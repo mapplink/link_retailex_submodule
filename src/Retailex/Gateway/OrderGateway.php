@@ -451,22 +451,22 @@ class OrderGateway extends AbstractGateway
             $value = NULL;
 
             try{
-                $isLocalMethod = method_exists('Retailex\Gateway\OrderGateway', $method);
+                $isLocalMethod = $logData['isLocalMethod'] = method_exists('Retailex\Gateway\OrderGateway', $method);
 
                 if ($code == '{parent}' && is_null($parent = $entity->getParent())) {
                     $error = '. Parent is not defined.';
 
-                }elseif ($code == '{parent}' && method_exists($parent, $method)) {
-                    $value = $parent->$method();
-
                 }elseif ($code == '{parent}' && $isLocalMethod){
                     $value = self::$method($parent);
 
-                }elseif ($code == '{entity}' && method_exists($entity, $method)) {
-                    $value = $entity->$method();
+                }elseif ($code == '{parent}' && method_exists($parent, $method)) {
+                    $value = $parent->$method();
 
                 }elseif ($code == '{entity}' && $isLocalMethod) {
                     $value = self::$method($entity);
+
+                }elseif ($code == '{entity}' && method_exists($entity, $method)) {
+                    $value = $entity->$method();
 
                 }elseif (is_numeric($code) && method_exists('Retailex\Gateway\OrderGateway', $method)) {
                     $value = self::$method();
