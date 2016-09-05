@@ -481,7 +481,7 @@ class OrderGateway extends AbstractGateway
                 $error = ': '.$exception->getMessage();
             }
 
-        }elseif (!is_int($value) && !is_string($value)) {
+        }elseif (!is_scalar($value)) {
             $error = ' with code/value '.var_export($value, TRUE).'.';
             $code = $value = NULL;
         }
