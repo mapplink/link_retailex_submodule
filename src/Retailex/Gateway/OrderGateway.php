@@ -387,7 +387,7 @@ class OrderGateway extends AbstractGateway
     {
         $order = $orderitem->getOrder();
 
-        if ($this->getData('is_virtual', FALSE)) {
+        if ($orderitem->getData('is_virtual', FALSE)) {
             $shippingMethod = '';
         }elseif ($order) {
             $shippingMethod = $order->getOrderShippingMethod();
@@ -438,13 +438,16 @@ class OrderGateway extends AbstractGateway
     protected function assignData(Entity $entity, &$data, $localCode, $value)
     {
         $error = '';
+        $logData = array('entity type'=>$entity->getTypeStr(), 'entity unique id'=>$entity->getUniqueId(),
+            'data (param)'=>$data, 'local code'=>$localCode, 'value (param)'=>$value);
 
         if (is_array($value) && is_int(key($value)) && is_string($code = current($value))) {
+            $logData['code'] = $code;
             $value = $entity->getData($code, NULL);
 
-        }elseif (is_array($value) && count($code) == 1) {
-            $code = key($value);
-            $method = current($value);
+        }elseif (is_array($value) && count($value) == 1) {
+            $code = $logData['code'] = key($value);
+            $method = $logData['method'] = current($value);
             $value = NULL;
 
             try{
@@ -480,16 +483,18 @@ class OrderGateway extends AbstractGateway
 
         }elseif (!is_int($value) && !is_string($value)) {
             $error = ' with code/value '.var_export($value, TRUE).'.';
-            $value = NULL;
+            $code = $value = NULL;
         }
+
+        $logData['value'] = $value;
 
         if (is_string($localCode) && strlen($localCode) > 0 && isset($value) && strlen($error) == 0) {
             $data[$localCode] = $value;
+            $logData['data'] = $data;
         }else{
             $message = 'Error on entity data mapping'.(strlen($error) > 0 ? $error : '.');
-            $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR, 'rex_o_wr_map_err', $message,
-                array('entity type'=>$entity->getTypeStr(), 'entity unique id'=>$entity->getUniqueId(),
-                    'local code'=>$localCode, 'code'=>$code, 'value'=>$value));
+            $this->getServiceLocator()->get('logService')
+                ->log(LogService::LEVEL_ERROR, 'rex_o_wr_map_err', $message, $logData);
         }
 
         return $data;
