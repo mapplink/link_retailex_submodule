@@ -29,12 +29,12 @@ class OrderGateway extends AbstractGateway
 
     /** @var array $this->billingAttributeMapping */
     protected $createOrderAttributeMap = array(
-//        'ExternalOrderId'=>array('UNIQUE_ID'=>NULL),
+//        'ExternalOrderId'=>array('UNIQUE_ID'=>NULL), // string key: method
         'DateCreated'=>array('placed_at'=>'getDateCreated'),
         'OrderTotal'=>array('{entity}'=>'getOrderTotal'),
         'OrderStatus'=>array('status'=>'getRetailExpressStatus'),
         'CustomerId'=>array('customer'=>'getLocalCustomer'),
-        'ExternalCustomerId'=>array('customer'),
+        'ExternalCustomerId'=>array('customer'), // int key: attribute
         'BillEmail'=>array('customer_email'),
         'ReceiverNews'=>0
     );
@@ -62,7 +62,7 @@ class OrderGateway extends AbstractGateway
     protected $createOrderOrderitemsAttributeMap = array(
         'ProductId'=>array('product'=>'getLocalId'),
         'QtyOrdered'=>array('{entity}'=>'getDeliveryQuantity'),
-        'QtyFulfilled'=>0,
+        'QtyFulfilled'=>0, // scalar value: default value
         'UnitPrice'=>array('{entity}'=>'getDiscountedPrice'),
         'DeliveryDueDate'=>'',
         'DeliveryMethod'=>array('{entity}'=>'getShipmentMethod'),
@@ -345,20 +345,6 @@ class OrderGateway extends AbstractGateway
     }
 
     /**
-     * @param mixed $entity
-     * @return NULL|string
-     */
-    protected function getLocalId($entity)
-    {
-        if (is_int($entity) || is_a($entity, '\Entity\Entity')) {
-            $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $entity);
-        }else{
-            $localId = NULL;
-        }
-        return $localId;
-    }
-
-    /**
      * @param int $methodString
      * @return int|NULL $methodId
      */
@@ -377,6 +363,20 @@ class OrderGateway extends AbstractGateway
         $dateCreated = $this->convertTimestampToRetailexDateFormat($timestamp);
 
         return $dateCreated;
+    }
+
+    /**
+     * @param mixed $entity
+     * @return NULL|string
+     */
+    protected function getLocalId($entity)
+    {
+        if (is_int($entity) || is_a($entity, '\Entity\Entity')) {
+            $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $entity);
+        }else{
+            $localId = NULL;
+        }
+        return $localId;
     }
 
     /**
@@ -467,22 +467,22 @@ class OrderGateway extends AbstractGateway
                     $error = '. Parent is not defined.';
 
                 }elseif ($code == '{parent}' && $isLocalMethod){
-                    $value = self::$method($parent);
+                    $value = $this->$method($parent);
 
                 }elseif ($code == '{parent}' && method_exists($parent, $method)) {
                     $value = $parent->$method();
 
                 }elseif ($code == '{entity}' && $isLocalMethod) {
-                    $value = self::$method($entity);
+                    $value = $this->$method($entity);
 
                 }elseif ($code == '{entity}' && method_exists($entity, $method)) {
                     $value = $entity->$method();
 
                 }elseif (strlen($code) == 0 && $isLocalMethod) {
-                    $value = self::$method();
+                    $value = $this->$method();
 
                 }elseif (!preg_match('#^\{.*\}$#ism', $code, $match) && $isLocalMethod) {
-                    $value = self::$method($entity->getData($code, NULL));
+                    $value = $this->$method($entity->getData($code, NULL));
 
                 }else{
                     $error = '. Mapping method '.$method.' is not existing.';
