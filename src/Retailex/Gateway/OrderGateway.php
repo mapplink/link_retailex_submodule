@@ -60,7 +60,7 @@ class OrderGateway extends AbstractGateway
         'DelCountry'=>array('country_code')
     );
     protected $createOrderOrderitemsAttributeMap = array(
-        'ProductId'=>array('{entity}'=>'getLocalId'),
+        'ProductId'=>array('product'=>'getLocalId'),
         'QtyOrdered'=>array('{entity}'=>'getDeliveryQuantity'),
         'QtyFulfilled'=>0,
         'UnitPrice'=>array('{entity}'=>'getDiscountedPrice'),
@@ -344,9 +344,18 @@ class OrderGateway extends AbstractGateway
         return $success;
     }
 
-    protected function getLocalId(Entity $entity)
+    /**
+     * @param mixed $entity
+     * @return NULL|string
+     */
+    protected function getLocalId($entity)
     {
-        return $this->_entityService->getLocalId($this->_node->getNodeId(), $entity);
+        if (is_int($entity) || is_a($entity, '\Entity\Entity')) {
+            $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $entity);
+        }else{
+            $localId = NULL;
+        }
+        return $localId;
     }
 
     /**
