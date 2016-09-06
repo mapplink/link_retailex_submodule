@@ -34,30 +34,9 @@ class OrderGateway extends AbstractGateway
         'OrderTotal'=>array('{entity}'=>'getOrderTotal'),
         'OrderStatus'=>array('status'=>'getRetailExpressStatus'),
         'CustomerId'=>array('customer'=>'getLocalId'),
-        'ExternalCustomerId'=>array('customer'), // int key: attribute
-        'BillEmail'=>array('customer_email'),
+        'ExternalCustomerId'=>array('customer'),
+        'BillEmail'=>array('customer_email'), // int key: attribute
         'ReceiverNews'=>0
-    );
-    /** @var array $this->billingAttributeMapping */
-    protected $createOrderBillingAttributeMap = array(
-        'BillFirstName'=>array('first_name'),
-        'BillLastName'=>array('last_name'),
-        //'BillAddress'=>array('street'),
-        'BillCompany'=>array('company'),
-        'BillPhone'=>array('telephone'),
-        'BillPostCode'=>array('postcode'),
-        'BillState'=>array('region'),
-        'BillCountry'=>array('country_code')
-    );
-    /** @var array $this->shippingAttributeMapping */
-    protected $createOrderShippingAttributeMap = array(
-        'DelCompany'=>array('company'),
-        //'DelAddress'=>array('street'),
-        //'DelSuburb'=>array('street'),
-        'DelPhone'=>array('telephone'),
-        'DelPostCode'=>array('postcode'),
-        'DelState'=>array('region'),
-        'DelCountry'=>array('country_code')
     );
     protected $createOrderOrderitemsAttributeMap = array(
         'ProductId'=>array('product'=>'getLocalId'),
@@ -69,7 +48,6 @@ class OrderGateway extends AbstractGateway
         'DeliveryDriverName'=>'',
         'TaxRateApplied'=>0.15,
     );
-
     /** @var array $this->paymentAttributeMap */
     protected $paymentAttributeMap = array(
         'OrderId'=>array('{entity}'=>'getLocalId'),
@@ -77,6 +55,29 @@ class OrderGateway extends AbstractGateway
         'Amount'=>array('grand_total'),
         'DateCreated'=>array('placed_at')
     );
+
+    /** @var array $this->billingAttributeMapping */
+    protected $createOrderBillingAttributeMap = array(
+        'BillFirstName'=>'first_name',
+        'BillLastName'=>'last_name',
+        //'BillAddress'=>'street',
+        'BillCompany'=>'company',
+        'BillPhone'=>'telephone',
+        'BillPostCode'=>'postcode',
+        'BillState'=>'region',
+        'BillCountry'=>'country_code'
+    );
+    /** @var array $this->shippingAttributeMapping */
+    protected $createOrderShippingAttributeMap = array(
+        'DelCompany'=>'company',
+        //'DelAddress'=>'street',
+        //'DelSuburb'=>'street',
+        'DelPhone'=>'telephone',
+        'DelPostCode'=>'postcode',
+        'DelState'=>'region',
+        'DelCountry'=>'country_code'
+    );
+
     /** @var array $this->paymentedMethodMapping */
     protected static $methodById = array(
         11=>'paypal_express',
