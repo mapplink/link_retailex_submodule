@@ -439,9 +439,8 @@ class OrderGateway extends AbstractGateway
     protected function assignData(Entity $entity, &$data, $localCode, $value)
     {
         $error = '';
-        $logData = array('entity type'=>$entity->getTypeStr(), 'entity unique id'=>$entity->getUniqueId(),
-            'local code'=>$localCode, 'value (param)'=>$value);
-
+        $logData = array('node id'=>$this->_node->getNodeId(), 'entity type'=>$entity->getTypeStr(),
+            'entity unique id'=>$entity->getUniqueId(), 'local code'=>$localCode, 'value (param)'=>$value);
 
         if (is_array($value) && is_int(key($value)) && is_string($code = current($value))) {
             $logData['code'] = $code;
@@ -459,14 +458,14 @@ class OrderGateway extends AbstractGateway
                     $error = '. Parent is not defined.';
 
                 }elseif ($code == '{parent}' && $isLocalMethod){
-                    $logData['parameter type'] = $entity->getTypeStr();
+                    $logData['parameter type:id'] = $parent->getTypeStr().':'.$parent->getId();
                     $value = $this->$method($parent);
 
                 }elseif ($code == '{parent}' && method_exists($parent, $method)) {
                     $value = $parent->$method();
 
                 }elseif ($code == '{entity}' && $isLocalMethod) {
-                    $logData['parameter type'] = $entity->getTypeStr();
+                    $logData['parameter type:id'] = $entity->getTypeStr().':'.$entity->getId();
                     $value = $this->$method($entity);
 
                 }elseif ($code == '{entity}' && method_exists($entity, $method)) {
