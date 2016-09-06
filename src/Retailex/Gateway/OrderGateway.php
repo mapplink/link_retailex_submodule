@@ -33,7 +33,7 @@ class OrderGateway extends AbstractGateway
         'DateCreated'=>array('placed_at'=>'getDateCreated'),
         'OrderTotal'=>array('{entity}'=>'getOrderTotal'),
         'OrderStatus'=>array('status'=>'getRetailExpressStatus'),
-        'CustomerId'=>array('customer'=>'getLocalCustomer'),
+        'CustomerId'=>array('customer'=>'getLocalId'),
         'ExternalCustomerId'=>array('customer'), // int key: attribute
         'BillEmail'=>array('customer_email'),
         'ReceiverNews'=>0
@@ -72,7 +72,7 @@ class OrderGateway extends AbstractGateway
 
     /** @var array $this->paymentAttributeMap */
     protected $paymentAttributeMap = array(
-        'OrderId'=>array(''=>'getLocalOrderId'),
+        'OrderId'=>array('{entity}'=>'getLocalId'),
         'MethodId'=>array('payment_method'=>'getMethodId'),
         'Amount'=>array('grand_total'),
         'DateCreated'=>array('placed_at')
@@ -426,15 +426,6 @@ class OrderGateway extends AbstractGateway
         }
 
         return $retailExpressStatus;
-    }
-
-    /**
-     * @param int $customerId
-     * @return int $localCustomerId
-     */
-    protected function getLocalCustomer($customerId)
-    {
-        return $this->_entityService->getLocalId($this->_node->getNodeId(), $customerId);
     }
 
     /**
