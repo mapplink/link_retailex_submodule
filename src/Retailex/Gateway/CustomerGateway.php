@@ -154,7 +154,10 @@ class CustomerGateway extends AbstractGateway
                 $data['BillSuburb'] = $billingAddress->getSuburb();
 
                 foreach ($this->billingAttributeMapping as $localCode=>$code) {
-                    $data[$localCode] = $billingAddress->getData($code, NULL);
+                    $value = $billingAddress->getData($code, NULL);
+                    if (!is_null($value)) {
+                        $data[$localCode] = $value;
+                    }
                 }
             }
             if (!is_null($shippingAddress)) {
@@ -175,7 +178,10 @@ class CustomerGateway extends AbstractGateway
                 $data['DelSuburb'] = $shippingAddress->getSuburb();
 
                 foreach ($this->shippingAttributeMapping as $localCode=>$code) {
-                    $data[$localCode] = $shippingAddress->getData($code, NULL);
+                    $value = $shippingAddress->getData($code, NULL);
+                    if (!is_null($value)) {
+                        $data[$localCode] = $value;
+                    }
                 }
             }
 
