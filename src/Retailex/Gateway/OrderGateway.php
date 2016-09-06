@@ -458,12 +458,14 @@ class OrderGateway extends AbstractGateway
                     $error = '. Parent is not defined.';
 
                 }elseif ($code == '{parent}' && $isLocalMethod){
+                    $logData['parameter type'] = $entity->getTypeStr();
                     $value = $this->$method($parent);
 
                 }elseif ($code == '{parent}' && method_exists($parent, $method)) {
                     $value = $parent->$method();
 
                 }elseif ($code == '{entity}' && $isLocalMethod) {
+                    $logData['parameter type'] = $entity->getTypeStr();
                     $value = $this->$method($entity);
 
                 }elseif ($code == '{entity}' && method_exists($entity, $method)) {
@@ -473,7 +475,8 @@ class OrderGateway extends AbstractGateway
                     $value = $this->$method();
 
                 }elseif (!preg_match('#^\{.*\}$#ism', $code, $match) && $isLocalMethod) {
-                    $value = $this->$method($entity->getData($code, NULL));
+                    $parameter = $logData['parameter'] = $entity->getData($code, NULL);
+                    $value = $this->$method($parameter);
 
                 }else{
                     $error = '. Mapping method '.$method.' is not existing.';
