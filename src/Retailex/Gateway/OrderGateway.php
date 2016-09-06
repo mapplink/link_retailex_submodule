@@ -535,7 +535,7 @@ class OrderGateway extends AbstractGateway
         $createData = array_replace_recursive(
             $createData,
             $this->getOrderitemData($order),
-            $this->getOrderAddPaymentData($order)
+            $this->getOrderAddPaymentData($order, TRUE)
         );
 
         return $createData;
@@ -561,14 +561,17 @@ class OrderGateway extends AbstractGateway
 
     /**
      * @param Order $order
-     * @return array
+     * @param bool|FALSE $skipOrderId
+     * @return array $paymentData
      */
-    protected function getOrderAddPaymentData(Order $order)
+    protected function getOrderAddPaymentData(Order $order, $skipOrderId = FALSE)
     {
         $paymentData = array();
 
         foreach ($this->paymentAttributeMap as $localCode=>$code) {
-            $this->assignData($order, $paymentData, $localCode, $code);
+            if ($localCode != 'OrderId' || !$skipOrderId) {
+                $this->assignData($order, $paymentData, $localCode, $code);
+            }
         }
 
         $paymentData = array('OrderPayments'=>array('OrderPayment'=>$paymentData));
