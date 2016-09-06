@@ -298,7 +298,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
                             $responseXml = NULL;
                             $soapFaultObject = (object) array(
                                 'Code'=>(object) array('Value'=>'ukwn'),
-                                'Reason'=>(object) array('Text'=>'ML: Unknown problem with the soap response.')
+                                'Reason'=>(object) array('Text'=>'MLERR: Unknown problem with the '.$call.' soap call.')
                             );
                         }
                     }catch (\Exception $exception) {
