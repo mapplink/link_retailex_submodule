@@ -313,7 +313,7 @@ class OrderGateway extends AbstractGateway
                         }
                     }else{
                         $logLevel = LogService::LEVEL_ERROR;
-                        $logCode = '_err';
+                        $logCode .= '_err';
                         $message = 'Payment cannot be added due to missing local id';
                     }
                     break;
@@ -321,7 +321,7 @@ class OrderGateway extends AbstractGateway
                 default:
                     $success = FALSE;
                     $logLevel = LogService::LEVEL_ERROR;
-                    $logCode = '_err';
+                    $logCode .= '_err';
                     $message = 'No valid action: '.$action->getType();
             }
 
@@ -348,7 +348,7 @@ class OrderGateway extends AbstractGateway
      * @param int $methodString
      * @return int|NULL $methodId
      */
-    public static function getMethodId($methodString)
+    public function getMethodId($methodString)
     {
         return self::getMappedId('method', $methodString);
     }
