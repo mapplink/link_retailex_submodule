@@ -158,7 +158,9 @@ class SoapCurl implements ServiceLocatorAwareInterface
         }
 
         foreach ($data as $key=>$value) {
-            $key = strstr($key, '<', TRUE);
+            if (strpos($key, '<') !== FALSE) {
+                $key = strstr($key, '<', TRUE);
+            }
             $elementString .= '<'.$prefix.$key.'>';
 
             if (isset($value) && is_array($value)) {
