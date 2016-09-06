@@ -78,7 +78,7 @@ class OrderGateway extends AbstractGateway
         'DateCreated'=>array('placed_at')
     );
     /** @var array $this->paymentedMethodMapping */
-    protected $methodById = array(
+    protected static $methodById = array(
         11=>'paypal_express',
         13=>'paymentexpress_pxpay2'
     );
