@@ -15,6 +15,7 @@ use Entity\Service\EntityService;
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
 use Magelink\Exception\GatewayException;
+use Magelink\Exception\SyncException;
 
 
 class CustomerGateway extends AbstractGateway
@@ -236,9 +237,13 @@ class CustomerGateway extends AbstractGateway
 
                 $logData['response'] = $response;
 
-                $customer = current($response->xpath('//Customer'));
-                if ($customer && isset($customer->Result) && $customer->Result == 'Success') {
-                    $localId = (int) $customer->CustomerId;
+                if (strpos($response, '<Customer>') === FALSE) {
+                    throw new SyncException('No valid response on '.$call);
+                }else{
+                    $customer = current($response->xpath('//Customer'));
+                    if ($customer && isset($customer->Result) && $customer->Result == 'Success') {
+                        $localId = (int) $customer->CustomerId;
+                    }
                 }
             }catch (\Exception $exception) {
                 $message = 'Error on CustomerCreateUpdate: '.$exception->getMessage();
