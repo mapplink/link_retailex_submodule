@@ -72,10 +72,10 @@ class OrderGateway extends AbstractGateway
 
     /** @var array $this->paymentAttributeMap */
     protected $paymentAttributeMap = array(
-        'OrderId'=>array('getLocalOrderId'),
+        'OrderId'=>array(''=>'getLocalOrderId'),
         'MethodId'=>array('payment_method'=>'getMethodId'),
-        'Amount'=>'grand_total',
-        'DateCreated'=>'placed_at'
+        'Amount'=>array('grand_total'),
+        'DateCreated'=>array('placed_at')
     );
     /** @var array $this->paymentedMethodMapping */
     protected $methodById = array(
