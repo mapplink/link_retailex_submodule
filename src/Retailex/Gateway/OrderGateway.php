@@ -73,7 +73,7 @@ class OrderGateway extends AbstractGateway
     /** @var array $this->paymentAttributeMap */
     protected $paymentAttributeMap = array(
         'OrderId'=>array('{entity}'=>'getLocalId'),
-        'MethodId'=>array('payment_method'=>'getMethodId'),
+        'MethodId'=>array('{entity}'=>'getPaymentMethodId'),
         'Amount'=>array('grand_total'),
         'DateCreated'=>array('placed_at')
     );
@@ -345,11 +345,12 @@ class OrderGateway extends AbstractGateway
     }
 
     /**
-     * @param int $methodString
+     * @param Order $order
      * @return int|NULL $methodId
      */
-    public function getMethodId($methodString)
+    public function getPaymentMethodId($order)
     {
+        $methodString = $order->getPaymentMethodsString();
         return self::getMappedId('method', $methodString);
     }
 
