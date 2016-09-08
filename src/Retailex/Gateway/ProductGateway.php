@@ -283,8 +283,12 @@ class ProductGateway extends AbstractGateway
                     continue;
                 }
 
-                $createConfigurable = isset($retailExpressDataRow['MatrixProduct'])
-                    && $retailExpressDataRow['MatrixProduct'] != 0;
+                $matrixProduct = isset($retailExpressDataRow['MatrixProduct']);
+                $configurableSku = self::getSku($retailExpressDataRow['Code']);
+                $createConfigurable = $matrixProduct && $retailExpressDataRow['MatrixProduct'] != 0
+                    || $matrixProduct &&
+                        (!$this->_entityService->loadEntity($this->_node->getNodeId(), 'product', 0, $configurableSku)
+                        || !isset($retailExpressData[$configurableSku]));
 
                 if ($createConfigurable) {
                     $stockOnHand = 0;
@@ -298,8 +302,8 @@ class ProductGateway extends AbstractGateway
                         $retailExpressData[self::getSku($associatedProduct['ProductId'])]
                     );
                     $configurableProduct['StockOnHand'] = $stockOnHand;
-                    $configurableProduct['configurable'] = TRUE;
-                    $retailExpressData[self::getSku($retailExpressDataRow['Code'])] = $configurableProduct;
+                    $configurableProduct['type'] = 'configurable';
+                    $retailExpressData[$configurableSku] = $configurableProduct;
 
                 }elseif (!array_key_exists(self::getSku($retailExpressDataRow['ProductId']), $retailExpressData)) {
                     foreach ($products as $product) {
@@ -422,7 +426,7 @@ class ProductGateway extends AbstractGateway
             if (!is_null($code)) {
                 $error = NULL;
 
-                $isConfigurable = isset($data['configurable']) && $data['configurable'];
+                $isConfigurable = isset($data['type']) && $data['type'] = 'configurable';
                 if (!($isConfigurable && in_array($localCode, $this->configurableAttributesToRemove))) {
                     if ((is_string($code) || is_array($code) && count($code) > 1)
                       && array_key_exists($localCode, $data)) {
