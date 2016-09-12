@@ -70,7 +70,7 @@ class OrderGateway extends AbstractGateway
     /** @var array $this->shippingAttributeMapping */
     protected $createOrderShippingAttributeMap = array(
         'DelCompany'=>'company',
-        //'DelAddress'=>'street',
+        'DelAddress'=>'street',
         //'DelSuburb'=>'street',
         'DelPhone'=>'telephone',
         'DelPostCode'=>'postcode',
