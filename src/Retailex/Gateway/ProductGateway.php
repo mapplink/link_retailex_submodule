@@ -26,6 +26,7 @@ class ProductGateway extends AbstractGateway
 
     const GATEWAY_ENTITY = 'product';
     const GATEWAY_ENTITY_CODE = 'p';
+    const PRODUCT_TYPE_CONFIGURABLE = 'configurable';
 
     /** @var array $this->productAttributeMap */
     protected $productAttributeMap = array(
@@ -292,17 +293,18 @@ class ProductGateway extends AbstractGateway
 
                 if ($createConfigurable) {
                     $stockOnHand = 0;
+                    $associatedSkus = array();
                     foreach ($products as $associatedProduct) {
-                        $retailExpressData[self::getSku($associatedProduct['ProductId'])] = $associatedProduct;
+                        $sku = self::getSku($associatedProduct['ProductId']);
+                        $retailExpressData[self::getSku($sku)] = $associatedProduct;
                         $stockOnHand += $associatedProduct['StockOnHand'];
+                        $associatedSkus[] = $sku;
                     }
 
-                    $configurableProduct = array_replace_recursive(
-                        $retailExpressDataRow,
-                        $retailExpressData[self::getSku($associatedProduct['ProductId'])]
-                    );
+                    $configurableProduct = $retailExpressDataRow;
                     $configurableProduct['StockOnHand'] = $stockOnHand;
-                    $configurableProduct['type'] = 'configurable';
+                    $configurableProduct['type'] = self::PRODUCT_TYPE_CONFIGURABLE;
+                    $configurableProduct['associatedSkus'] = $associatedSkus;
                     $retailExpressData[$configurableSku] = $configurableProduct;
 
                 }elseif (!array_key_exists(self::getSku($retailExpressDataRow['ProductId']), $retailExpressData)) {
@@ -314,8 +316,15 @@ class ProductGateway extends AbstractGateway
                     }
                     $retailExpressData[self::getSku($retailExpressDataRow['ProductId'])] = $retailExpressDataRow;
                 }
+
+                $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_DEBUG,
+                    'rex_p_cr_conf',
+                    ($createConfigurable ? 'Created configurable '.$configurableSku.'.' : 'No configurable created.'),
+                    array('sku'=>$sku, 'matrix'=>$matrixProduct, 'create'=>$createConfigurable, 'products'=>$products)
+                );
             }
 
+            $idBySku = array();
             foreach ($retailExpressData as $sku=>$retailExpressProductData) {
                 $productId = (int) $retailExpressProductData['ProductId'];
                 $parentId = NULL;
@@ -331,10 +340,23 @@ class ProductGateway extends AbstractGateway
                     )
                 );
 
+                if ($isConfigurable = $this->isConfigurable($retailExpressProductData)) {
+                    $configurableProductLinks = array();
+                    foreach ($retailExpressProductData['associatedSkus'] as $sku) {
+                        $configurableProductLinks[] = $idBySku[$sku];
+                        unset($idBySku[$sku]);
+                    }
+                }
+
                 $productData = array_replace_recursive(
                     $this->getMappedData($this->productAttributeMap, $retailExpressProductData),
                     $this->getMappedData($this->productAttributeMapOptional, $retailExpressProductData, FALSE)
                 );
+
+                if ($isConfigurable) {
+                    $productData['extensionAttributes']['configurableProductLinks'] = $configurableProductLinks;
+                    unset($configurableProductLinks);
+                }
 
                 try{
                     $product = $this->processProductUpdate(
@@ -344,6 +366,7 @@ class ProductGateway extends AbstractGateway
                         $parentId,
                         $productData
                     );
+                    $idBySku[$sku] = $product->getId();
                 }catch(\Exception $exception){
                     $message = 'Product process error: '.$exception->getMessage();
                     throw new GatewayException($message, $exception->getCode(), $exception);
@@ -412,7 +435,17 @@ class ProductGateway extends AbstractGateway
         return $retailExpressDataById;
     }
 
-/**
+    /**
+     * @param array $productData
+     * @return bool $isConfigurable
+     */
+    protected function isConfigurable(array $productData)
+    {
+        $isConfigurable = isset($productData['type']) && $productData['type'] = self::PRODUCT_TYPE_CONFIGURABLE;
+        return $isConfigurable;
+    }
+
+    /**
      * @param array $map
      * @param array $data
      * @param bool|TRUE $required
@@ -421,12 +454,14 @@ class ProductGateway extends AbstractGateway
     protected function getMappedData(array $map, array $data, $required = TRUE)
     {
         $mappedData = $this->mappedDataPreset;
+        if ($isConfigurable = $this->isConfigurable($data)) {
+            $mappedData['type'] = self::PRODUCT_TYPE_CONFIGURABLE;
+        }
 
         foreach ($map as $localCode=>$code) {
             if (!is_null($code)) {
                 $error = NULL;
 
-                $isConfigurable = isset($data['type']) && $data['type'] = 'configurable';
                 if (!($isConfigurable && in_array($localCode, $this->configurableAttributesToRemove))) {
                     if ((is_string($code) || is_array($code) && count($code) > 1)
                       && array_key_exists($localCode, $data)) {
