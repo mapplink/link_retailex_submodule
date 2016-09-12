@@ -56,6 +56,9 @@ class ProductGateway extends AbstractGateway
 //        'DefaultPrice'=>NULL,
 //        'CustomerDiscountedPrice'=>NULL,
     );
+    protected $productAttributeCustom = array(
+        'configurable_sku'
+    );
     /** @var array $this->configurableAttributesToRemove */
     protected $configurableAttributesToRemove = array('SizeId', 'ColourId');
     /** @var array $this->stockitemAttributeMap */
@@ -293,18 +296,16 @@ class ProductGateway extends AbstractGateway
 
                 if ($createConfigurable) {
                     $stockOnHand = 0;
-                    $associatedSkus = array();
                     foreach ($products as $associatedProduct) {
+                        $associatedProduct['configurable_sku'] = $configurableSku;
                         $sku = self::getSku($associatedProduct['ProductId']);
                         $retailExpressData[self::getSku($sku)] = $associatedProduct;
                         $stockOnHand += $associatedProduct['StockOnHand'];
-                        $associatedSkus[] = $sku;
                     }
 
                     $configurableProduct = $retailExpressDataRow;
                     $configurableProduct['StockOnHand'] = $stockOnHand;
                     $configurableProduct['type'] = self::PRODUCT_TYPE_CONFIGURABLE;
-                    $configurableProduct['associatedSkus'] = $associatedSkus;
                     $retailExpressData[$configurableSku] = $configurableProduct;
 
                 }elseif (!array_key_exists(self::getSku($retailExpressDataRow['ProductId']), $retailExpressData)) {
@@ -340,23 +341,11 @@ class ProductGateway extends AbstractGateway
                     )
                 );
 
-                if ($isConfigurable = $this->isConfigurable($retailExpressProductData)) {
-                    $configurableProductLinks = array();
-                    foreach ($retailExpressProductData['associatedSkus'] as $sku) {
-                        $configurableProductLinks[] = $idBySku[$sku];
-                        unset($idBySku[$sku]);
-                    }
-                }
-
                 $productData = array_replace_recursive(
                     $this->getMappedData($this->productAttributeMap, $retailExpressProductData),
-                    $this->getMappedData($this->productAttributeMapOptional, $retailExpressProductData, FALSE)
+                    $this->getMappedData($this->productAttributeMapOptional, $retailExpressProductData, FALSE),
+                    $this->getMappedData($this->productAttributeCustom, $retailExpressData)
                 );
-
-                if ($isConfigurable) {
-                    $productData['extensionAttributes']['configurableProductLinks'] = $configurableProductLinks;
-                    unset($configurableProductLinks);
-                }
 
                 try{
                     $product = $this->processProductUpdate(
@@ -463,21 +452,25 @@ class ProductGateway extends AbstractGateway
                 $error = NULL;
 
                 if (!($isConfigurable && in_array($localCode, $this->configurableAttributesToRemove))) {
-                    if ((is_string($code) || is_array($code) && count($code) > 1)
+                    if (is_int($localCode) && is_string($code) && array_key_exists($code, $data)) {
+                        $value = $data[$code];
+
+                    }elseif ((is_string($code) || is_array($code) && count($code) > 1)
                       && array_key_exists($localCode, $data)) {
                         $value = $data[$localCode];
+
                     }elseif (is_array($code) && count($code) == 1) {
                         $method = current($code);
                         $code = key($code);
-                        $value = NULL;
+                        $value = null;
 
                         try{
                             if (method_exists('Retailex\Gateway\ProductGateway', $method)) {
                                 $value = self::$method($data[$localCode]);
-                            }else{
+                            }else {
                                 $error = 'Mapping method '.$method.' is not existing.';
                             }
-                        }catch (\Exception $exception) {
+                        }catch(\Exception $exception){
                             $error = $exception->getMessage();
                         }
                     }else{
