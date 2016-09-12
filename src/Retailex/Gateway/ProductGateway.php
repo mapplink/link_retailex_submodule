@@ -435,6 +435,19 @@ class ProductGateway extends AbstractGateway
     }
 
     /**
+     * @param array $data
+     * @return array $sanitisedData
+     */
+    protected static function sanitiseData(&$data)
+    {
+        foreach ($data as &$value) {
+            $value = str_replace("\n", '; ', $value);
+        }
+
+        return $data;
+    }
+
+    /**
      * @param array $map
      * @param array $data
      * @param bool|TRUE $required
@@ -442,6 +455,8 @@ class ProductGateway extends AbstractGateway
      */
     protected function getMappedData(array $map, array $data, $required = TRUE)
     {
+        self::sanitiseData($data);
+
         $mappedData = $this->mappedDataPreset;
         if ($isConfigurable = $this->isConfigurable($data)) {
             $mappedData['type'] = self::PRODUCT_TYPE_CONFIGURABLE;
