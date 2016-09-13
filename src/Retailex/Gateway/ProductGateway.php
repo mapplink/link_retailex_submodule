@@ -57,7 +57,8 @@ class ProductGateway extends AbstractGateway
 //        'CustomerDiscountedPrice'=>NULL,
     );
     protected $productAttributeCustom = array(
-        'configurable_sku'
+        'configurable_sku',
+        'visible'
     );
     /** @var array $this->configurableAttributesToRemove */
     protected $configurableAttributesToRemove = array('SizeId', 'ColourId');
@@ -292,12 +293,13 @@ class ProductGateway extends AbstractGateway
                 $createConfigurable = $matrixProduct && $retailExpressDataRow['MatrixProduct'] != 0
                     || $matrixProduct &&
                         (!$this->_entityService->loadEntity($this->_node->getNodeId(), 'product', 0, $configurableSku)
-                        || !isset($retailExpressData[$configurableSku]));
+                            || !isset($retailExpressData[$configurableSku]));
 
                 if ($createConfigurable) {
                     $stockOnHand = 0;
                     foreach ($products as $associatedProduct) {
                         $associatedProduct['configurable_sku'] = $configurableSku;
+                        $associatedProduct['visible'] = 0;
                         $sku = self::getSku($associatedProduct['ProductId']);
                         $retailExpressData[self::getSku($sku)] = $associatedProduct;
                         $stockOnHand += $associatedProduct['StockOnHand'];
@@ -306,12 +308,14 @@ class ProductGateway extends AbstractGateway
                     $configurableProduct = $retailExpressDataRow;
                     $configurableProduct['StockOnHand'] = $stockOnHand;
                     $configurableProduct['type'] = Product::TYPE_CONFIGURABLE;
+                    $configurableProduct['visible'] = 1;
                     $retailExpressData[$configurableSku] = $configurableProduct;
 
                 }elseif (!array_key_exists(self::getSku($retailExpressDataRow['ProductId']), $retailExpressData)) {
                     foreach ($products as $product) {
                         if ($product['ProductId'] == $retailExpressDataRow['ProductId']) {
                             $retailExpressDataRow = array_replace_recursive($retailExpressDataRow, $product);
+                            $retailExpressDataRow['visible'] = (int) !$matrixProduct;
                             break;
                         }
                     }
