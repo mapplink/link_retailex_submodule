@@ -56,10 +56,8 @@ class ProductGateway extends AbstractGateway
 //        'DefaultPrice'=>NULL,
 //        'CustomerDiscountedPrice'=>NULL,
     );
-    protected $productAttributeCustom = array(
-        'configurable_sku',
-        'visible'
-    );
+    /** @var array $this->productAttributeCustom */
+    protected $productAttributeCustom = array('configurable_sku', 'visible');
     /** @var array $this->configurableAttributesToRemove */
     protected $configurableAttributesToRemove = array('SizeId', 'ColourId');
     /** @var array $this->stockitemAttributeMap */
@@ -73,7 +71,7 @@ class ProductGateway extends AbstractGateway
 //        'ChannelId'=>NULL
     );
     /** @var array $this->mappedDataPreset */
-    protected $mappedDataPreset = array('storeId'=>0);
+    protected $mappedDataPreset = array('store_id'=>0);
     /** @var array $this->mappedCreateProductDataPreset */
     protected $mappedCreateProductDataPreset = array('configurable_sku'=>'<none>', 'enabled'=>1, 'type'=>'simple');
     /** @var array $this->mappedUpdateProductDataPreset */
@@ -447,7 +445,7 @@ class ProductGateway extends AbstractGateway
     {
         foreach ($data as &$value) {
             if (is_string($value)) {
-                $value = str_replace(array("\r\n", "\n"), '; ', $value);
+                $value = str_replace(array("\r", "\n"), '; ', $value);
             }elseif (is_array($value)) {
                 self::sanitiseData($value);
             }
@@ -467,8 +465,8 @@ class ProductGateway extends AbstractGateway
     {
         self::sanitiseData($data);
 
+        $mappedData = $this->mappedDataPreset;
         if ($entityType == 'product') {
-            $mappedData = $this->mappedDataPreset;
             if ($isConfigurable = $this->isConfigurable($data)) {
                 $mappedData['type'] = Product::TYPE_CONFIGURABLE;
             }
