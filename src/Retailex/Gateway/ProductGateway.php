@@ -446,7 +446,11 @@ class ProductGateway extends AbstractGateway
     protected static function sanitiseData(&$data)
     {
         foreach ($data as &$value) {
-            $value = str_replace("\n", '; ', $value);
+            if (is_string($value)) {
+                $value = str_replace(array("\r\n", "\n"), '; ', $value);
+            }elseif (is_array($value)) {
+                self::sanitiseData($value);
+            }
         }
 
         return $data;
