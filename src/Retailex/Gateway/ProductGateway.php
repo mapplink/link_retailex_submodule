@@ -10,15 +10,16 @@
 
 namespace Retailex\Gateway;
 
-use Entity\Update;
 use Entity\Action;
-use Retailex\Service\RetailexService;
+use Entity\Entity;
+use Entity\Update;
+use Entity\Wrapper\Product;
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
 use Magelink\Exception\SyncException;
 use Magelink\Exception\NodeException;
 use Magelink\Exception\GatewayException;
-use Node\Entity;
+use Retailex\Service\RetailexService;
 
 
 class ProductGateway extends AbstractGateway
@@ -26,7 +27,6 @@ class ProductGateway extends AbstractGateway
 
     const GATEWAY_ENTITY = 'product';
     const GATEWAY_ENTITY_CODE = 'p';
-    const PRODUCT_TYPE_CONFIGURABLE = 'configurable';
 
     /** @var array $this->productAttributeMap */
     protected $productAttributeMap = array(
@@ -305,7 +305,7 @@ class ProductGateway extends AbstractGateway
 
                     $configurableProduct = $retailExpressDataRow;
                     $configurableProduct['StockOnHand'] = $stockOnHand;
-                    $configurableProduct['type'] = self::PRODUCT_TYPE_CONFIGURABLE;
+                    $configurableProduct['type'] = Product::TYPE_CONFIGURABLE;
                     $retailExpressData[$configurableSku] = $configurableProduct;
 
                 }elseif (!array_key_exists(self::getSku($retailExpressDataRow['ProductId']), $retailExpressData)) {
@@ -430,7 +430,7 @@ class ProductGateway extends AbstractGateway
      */
     protected function isConfigurable(array $productData)
     {
-        $isConfigurable = isset($productData['type']) && $productData['type'] = self::PRODUCT_TYPE_CONFIGURABLE;
+        $isConfigurable = isset($productData['type']) && $productData['type'] = Product::TYPE_CONFIGURABLE;
         return $isConfigurable;
     }
 
@@ -459,7 +459,7 @@ class ProductGateway extends AbstractGateway
 
         $mappedData = $this->mappedDataPreset;
         if ($isConfigurable = $this->isConfigurable($data)) {
-            $mappedData['type'] = self::PRODUCT_TYPE_CONFIGURABLE;
+            $mappedData['type'] = Product::TYPE_CONFIGURABLE;
         }
 
         foreach ($map as $localCode=>$code) {
@@ -522,7 +522,7 @@ class ProductGateway extends AbstractGateway
      * @param int $storeId
      * @param int $parentId
      * @param array $data
-     * @return \Entity\Entity|NULL
+     * @return Entity|NULL
      */
     protected function processProductUpdate($localId, $sku, $storeId, $parentId, array $data)
     {
@@ -621,7 +621,7 @@ class ProductGateway extends AbstractGateway
      * @param int $storeId
      * @param int $parentId
      * @param array $data
-     * @return \Entity\Entity|NULL
+     * @return Entity|NULL
      */
     protected function processStockUpdate($productLocalId, $sku, $storeId, $parentId, array $data)
     {
@@ -729,11 +729,11 @@ class ProductGateway extends AbstractGateway
 
     /**
      * Write out all the updates to the given entity.
-     * @param \Entity\Entity $entity
+     * @param Entity $entity
      * @param string[] $attributes
      * @param int $type
      */
-    public function writeUpdates(\Entity\Entity $entity, $attributes, $type = Update::TYPE_UPDATE)
+    public function writeUpdates(Entity $entity, $attributes, $type = Update::TYPE_UPDATE)
     {
         return FALSE;
 
@@ -999,7 +999,7 @@ class ProductGateway extends AbstractGateway
                         }
                         if ($attributeSet === NULL) {
                             $message = 'Invalid product class '.$entity->getData('product_class', 'default');
-                            throw new \Magelink\Exception\SyncException($message);
+                            throw new SyncException($message);
                         }
 
                         $message = 'Creating product(SOAP) : '.$sku.' with '.implode(', ', array_keys($productData));
