@@ -346,9 +346,9 @@ class ProductGateway extends AbstractGateway
                 );
 
                 $productData = array_replace_recursive(
-                    $this->getMappedData($this->productAttributeMap, $retailExpressProductData),
-                    $this->getMappedData($this->productAttributeMapOptional, $retailExpressProductData, FALSE),
-                    $this->getMappedData($this->productAttributeCustom, $retailExpressData)
+                    $this->getMappedData('product', $this->productAttributeMap, $retailExpressProductData),
+                    $this->getMappedData('product', $this->productAttributeMapOptional, $retailExpressProductData, FALSE),
+                    $this->getMappedData('product', $this->productAttributeCustom, $retailExpressData)
                 );
 
                 try{
@@ -366,7 +366,8 @@ class ProductGateway extends AbstractGateway
                 }
 
                 try {
-                    $stockitemData = $this->getMappedData($this->stockitemAttributeMap, $retailExpressProductData);
+                    $stockitemData =
+                        $this->getMappedData('stockitem', $this->stockitemAttributeMap, $retailExpressProductData);
 
                     $this->processStockUpdate(
                         $productId,
@@ -452,18 +453,23 @@ class ProductGateway extends AbstractGateway
     }
 
     /**
+     * @param string $entityType
      * @param array $map
      * @param array $data
      * @param bool|TRUE $required
      * @return array $mappedData
      */
-    protected function getMappedData(array $map, array $data, $required = TRUE)
+    protected function getMappedData($entityType, array $map, array $data, $required = TRUE)
     {
         self::sanitiseData($data);
 
-        $mappedData = $this->mappedDataPreset;
-        if ($isConfigurable = $this->isConfigurable($data)) {
-            $mappedData['type'] = Product::TYPE_CONFIGURABLE;
+        if ($entityType == 'product') {
+            $mappedData = $this->mappedDataPreset;
+            if ($isConfigurable = $this->isConfigurable($data)) {
+                $mappedData['type'] = Product::TYPE_CONFIGURABLE;
+            }
+        }else{
+            $isConfigurable = FALSE;
         }
 
         foreach ($map as $localCode=>$code) {
@@ -520,6 +526,7 @@ class ProductGateway extends AbstractGateway
 
         return $mappedData;
     }
+
     /**
      * @param int $localId
      * @param string $sku
@@ -650,15 +657,15 @@ class ProductGateway extends AbstractGateway
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productLocalId);
 
                 $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR,
-                    'rex_p_relink',
-                    'Incorrectly linked product '.$sku.' ('.$noneOrWrongLocalId.'). Re-linked now.',
+                    'rex_si_relink',
+                    'Incorrectly linked stockitem '.$sku.' ('.$noneOrWrongLocalId.'). Re-linked now.',
                     array('code'=>$sku, 'wrong local id'=>$noneOrWrongLocalId),
                     array('node'=>$this->_node, 'entity'=>$existingEntity)
                 );
             }else{
                 $this->getServiceLocator() ->get('logService')->log(LogService::LEVEL_INFO,
-                    'rex_p_link',
-                    'Unlinked product '.$sku,
+                    'rex_si_link',
+                    'Unlinked stockitem '.$sku,
                     array('sku'=>$sku),
                     array('node'=>$this->_node, 'entity'=>$existingEntity)
                 );
@@ -667,8 +674,8 @@ class ProductGateway extends AbstractGateway
         }else{
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_INFO,
-                    'rex_p_upd',
-                    'Updated product '.$sku,
+                    'rex_si_re_upd',
+                    'Updated stockitem '.$sku,
                     array('sku'=>$sku),
                     array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
                 );
