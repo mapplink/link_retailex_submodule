@@ -55,13 +55,6 @@ abstract class AbstractGateway extends BaseAbstractGateway
     }
 
     /**
-     * TECHNICAL DEBT // ToDo: Implement this instead of the retrieve functionality on all gateways
-     * Retrieve and action all updated records (either from polling, pushed data, or other sources).
-     * @return array $retrieveResults
-     */
-    protected function retrieveEntities() {}
-
-    /**
      * @return int $this->newRetrieveTimestamp
      */
     protected function getNewRetrieveTimestamp()

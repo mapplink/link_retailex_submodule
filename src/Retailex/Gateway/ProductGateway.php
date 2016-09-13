@@ -244,7 +244,7 @@ class ProductGateway extends AbstractGateway
      * @throws GatewayException
      * @throws NodeException
      */
-    public function retrieveEntities()
+    protected function retrieveEntities()
     {
         $lastRetrieve = $this->getLastRetrieveDate();
 
@@ -385,12 +385,8 @@ class ProductGateway extends AbstractGateway
         }
 
         if (count($retailExpressData) > 0) {
-            $this->_nodeService->setTimestamp(
-                $this->_nodeEntity->getNodeId(),
-                'product',
-                'retrieve',
-                $this->getNewRetrieveTimestamp()
-            );
+            $this->_nodeService
+                ->setTimestamp($this->_nodeEntity->getNodeId(), 'product', 'retrieve', $this->getNewRetrieveTimestamp());
         }
 
         $seconds = ceil(time() - $this->getNewRetrieveTimestamp());
