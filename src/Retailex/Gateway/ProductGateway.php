@@ -478,7 +478,7 @@ class ProductGateway extends AbstractGateway
 
         foreach ($map as $localCode=>$code) {
             if (!is_null($code)) {
-                $error = NULL;
+                $error = $value = NULL;
 
                 if (!($isConfigurable && in_array($localCode, $this->configurableAttributesToRemove))) {
                     if (is_int($localCode) && is_string($code) && array_key_exists($code, $data)) {
@@ -491,7 +491,6 @@ class ProductGateway extends AbstractGateway
                     }elseif (is_array($code) && count($code) == 1) {
                         $method = current($code);
                         $code = key($code);
-                        $value = NULL;
 
                         try{
                             if (method_exists('Retailex\Gateway\ProductGateway', $method)) {
