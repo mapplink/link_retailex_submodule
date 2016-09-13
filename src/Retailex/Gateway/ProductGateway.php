@@ -487,7 +487,7 @@ class ProductGateway extends AbstractGateway
                     }elseif (is_array($code) && count($code) == 1) {
                         $method = current($code);
                         $code = key($code);
-                        $value = null;
+                        $value = NULL;
 
                         try{
                             if (method_exists('Retailex\Gateway\ProductGateway', $method)) {
