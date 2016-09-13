@@ -301,7 +301,7 @@ class ProductGateway extends AbstractGateway
                         $associatedProduct['configurable_sku'] = $configurableSku;
                         $associatedProduct['visible'] = 0;
                         $sku = self::getSku($associatedProduct['ProductId']);
-                        $retailExpressData[self::getSku($sku)] = $associatedProduct;
+                        $retailExpressData[$sku] = $associatedProduct;
                         $stockOnHand += $associatedProduct['StockOnHand'];
                     }
 
