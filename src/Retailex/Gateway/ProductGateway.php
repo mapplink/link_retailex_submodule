@@ -71,11 +71,11 @@ class ProductGateway extends AbstractGateway
 //        'ChannelId'=>NULL
     );
     /** @var array $this->mappedDataPreset */
-    protected $mappedDataPreset = array('store_id'=>0);
+    protected $mappedDataPreset = array();
     /** @var array $this->mappedCreateProductDataPreset */
     protected $mappedCreateProductDataPreset = array('configurable_sku'=>'<none>', 'enabled'=>1, 'type'=>'simple');
     /** @var array $this->mappedUpdateProductDataPreset */
-    protected $mappedUpdateProductDataPreset = array('enabled'=>-1);
+    protected $mappedUpdateProductDataPreset = array('enabled'=>1);
 
     /** @var array $this->staticAttributes */
     protected $staticAttributes = array('storeId'=>NULL);
@@ -459,7 +459,8 @@ class ProductGateway extends AbstractGateway
      */
     protected function getMappedData($entityType, array $map, array $data, $required = TRUE)
     {
-        self::sanitiseData($data);
+        $sanitisedData = $data;
+        self::sanitiseData($sanitisedData);
 
         $mappedData = $this->mappedDataPreset;
         if ($entityType == 'product') {
@@ -502,13 +503,15 @@ class ProductGateway extends AbstractGateway
                     if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
                         $mappedData[$code] = $value;
                     }elseif (is_array($code) && count($code) > 1 && isset($value) && !isset($error)) {
-                        foreach ($code as $c) {
-                            $mappedData[$c] = $value;
+                        $codes = $code;
+                        foreach ($codes as $code) {
+                            $mappedData[$code] = $value;
                         }
                     }elseif ($required) {
+                        $logData = array('is configurable'=>$isConfigurable, 'local code'=>$localCode, 'code'=>$code,
+                            'value'=>$value, 'data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
                         $this->getServiceLocator()->get('logService')
-                            ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error,
-                                array('local code'=>$localCode, 'code'=>$code, 'value'=>$value, 'data'=>$data));
+                            ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error, $logData);
                     }
                 }
             }
@@ -520,6 +523,10 @@ class ProductGateway extends AbstractGateway
             }
             unset($mappedData[$code]);
         }
+
+        $logData = array('map'=>$map, 'data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
+        $this->getServiceLocator()->get('logService')
+            ->log(LogService::LEVEL_DEBUG, 'rex_p_re_map', 'Mapped data on '.$entityType.'.', $logData);
 
         return $mappedData;
     }
