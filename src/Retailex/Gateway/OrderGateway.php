@@ -405,21 +405,22 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
 
     /**
      * @param Orderitem $orderitem
-     * @return string $shippingMethod
+     * @return string $shipmentMethod
      */
     protected function getShipmentMethod(Orderitem $orderitem)
     {
         $order = $orderitem->getOrder();
 
         if (!$orderitem->getData('is_physical', TRUE)) {
-            $shippingMethod = '';
+            $shipmentMethod = '';
         }elseif ($order) {
-            $shippingMethod = $order->getShipmentMethod();
-        }else {
-            $shippingMethod = 'home';
+            $shipmentMethod = $order->getShipmentMethod();
+        }
+        if (!isset($shipmentMethod)) {
+            $shipmentMethod = 'home';
         }
 
-        return $shippingMethod;
+        return $shipmentMethod;
     }
 
     /**
