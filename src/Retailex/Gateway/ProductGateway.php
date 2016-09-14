@@ -460,6 +460,7 @@ class ProductGateway extends AbstractGateway
         $mappedData = $this->mappedDataPreset;
 
         $logCode = 'rex_p_re_map';
+        $logService = $this->getServiceLocator()->get('logService');
 
         if ($entityType == 'product') {
             if ($isConfigurable = $this->isConfigurable($data)) {
@@ -508,8 +509,7 @@ class ProductGateway extends AbstractGateway
                     }elseif ($required) {
                         $logData = array('is configurable'=>$isConfigurable, 'local code'=>$localCode, 'code'=>$code,
                             'value'=>$value, 'data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
-                        $this->getServiceLocator()->get('logService')
-                            ->log(LogService::LEVEL_ERROR, $logCode.'_err', $error, $logData);
+                        $logService->log(LogService::LEVEL_ERROR, $logCode.'_err', $error, $logData);
                     }
                 }
             }
@@ -522,9 +522,17 @@ class ProductGateway extends AbstractGateway
             unset($mappedData[$code]);
         }
 
-        $logData = array('map'=>$map, 'data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
-        $this->getServiceLocator()->get('logService')
-            ->log(LogService::LEVEL_DEBUG, $logCode, 'Mapped data on '.$entityType.'.', $logData);
+        $logMessage = 'Mapped data on '.$entityType.'.';
+        $logData = array('map'=>$map,
+            'data skus'=>array_keys($data),
+            'data (f6l6)'=>array_merge(array_slice($data, 0, 6), array_slice($data, -6)),
+            'sanitised (f6l6)'=>array_merge(array_slice($sanitisedData, 0, 6), array_slice($sanitisedData, -6)),
+            'mapped (f6l6)'=>array_merge(array_slice($mappedData, 0, 6), array_slice($mappedData, -6))
+        );
+        $logService->log(LogService::LEVEL_DEBUG, $logCode, $logMessage, $logData);
+
+        $logData = array('data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
+//        $logService->log(LogService::LEVEL_DEBUGEXTRA, $logCode, $logMessage.' (All Data)', $logData);
 
         return $mappedData;
     }
