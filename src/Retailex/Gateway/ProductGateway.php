@@ -332,21 +332,17 @@ class ProductGateway extends AbstractGateway
                 $productId = (int) $retailExpressProductData['ProductId'];
                 $parentId = NULL;
 
-                $this->getServiceLocator()->get('logService')->log(
-                    LogService::LEVEL_DEBUGEXTRA,
-                    'rex_psoap_data',
-                    'Loaded product data from Retailex via SOAP api.',
-                    array(
-                        'local product id'=>$productId,
-                        'sku'=>$sku,
-                        'data'=>$retailExpressProductData
-                    )
-                );
-
                 $productData = array_replace_recursive(
                     $this->getMappedData('product', $this->productAttributeMap, $retailExpressProductData),
                     $this->getMappedData('product', $this->productAttributeMapOptional, $retailExpressProductData, FALSE),
                     $this->getMappedData('product', $this->productAttributeCustom, $retailExpressData)
+                );
+
+                $this->getServiceLocator()->get('logService')->log(
+                    LogService::LEVEL_DEBUGEXTRA,
+                    'rex_psoap_data',
+                    'Retrieved product data from Retailex via SOAP api.',
+                    array('sku'=>$sku, 'data'=>$retailExpressProductData, 'processed data'=>$productData)
                 );
 
                 try{
