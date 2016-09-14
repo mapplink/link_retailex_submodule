@@ -461,8 +461,10 @@ class ProductGateway extends AbstractGateway
     {
         $sanitisedData = $data;
         self::sanitiseData($sanitisedData);
-
         $mappedData = $this->mappedDataPreset;
+
+        $logCode = 'rex_p_re_map';
+
         if ($entityType == 'product') {
             if ($isConfigurable = $this->isConfigurable($data)) {
                 $mappedData['type'] = Product::TYPE_CONFIGURABLE;
@@ -511,7 +513,7 @@ class ProductGateway extends AbstractGateway
                         $logData = array('is configurable'=>$isConfigurable, 'local code'=>$localCode, 'code'=>$code,
                             'value'=>$value, 'data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
                         $this->getServiceLocator()->get('logService')
-                            ->log(LogService::LEVEL_ERROR, 'rex_p_re_map_err', $error, $logData);
+                            ->log(LogService::LEVEL_ERROR, $logCode.'_err', $error, $logData);
                     }
                 }
             }
@@ -526,7 +528,7 @@ class ProductGateway extends AbstractGateway
 
         $logData = array('map'=>$map, 'data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
         $this->getServiceLocator()->get('logService')
-            ->log(LogService::LEVEL_DEBUG, 'rex_p_re_map', 'Mapped data on '.$entityType.'.', $logData);
+            ->log(LogService::LEVEL_DEBUG, $logCode, 'Mapped data on '.$entityType.'.', $logData);
 
         return $mappedData;
     }
