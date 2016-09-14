@@ -78,7 +78,7 @@ class OrderGateway extends AbstractGateway
         'DelCountry'=>'country_code'
     );
 
-    /** @var array $this->paymentedMethodMapping */
+    /** @var array $this->methodById */
     protected static $methodById = array(
         11=>'paypal_express',
         13=>'paymentexpress_pxpay2'
