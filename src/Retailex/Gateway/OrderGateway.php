@@ -118,7 +118,7 @@ class OrderGateway extends AbstractGateway
             $intervalsBefore = 2.4 - min(1.2, max(0, $retrieveInterval / 3600));
             $retrieveTimestamp = intval($this->getLastRetrieveTimestamp()
                 - min($retrieveInterval * $intervalsBefore, $retrieveInterval + 3600));
-            $date = $this->convertTimestampToRetailexDateFormat($retrieveTimestamp);
+            $date = $this->convertTimestampToExternalDateFormat($retrieveTimestamp);
         }else{
             $date = FALSE;
         }
@@ -375,7 +375,7 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
     protected function getDateCreated($placedAt)
     {
         $timestamp = strtotime($placedAt);
-        $dateCreated = $this->convertTimestampToRetailexDateFormat($timestamp);
+        $dateCreated = $this->convertTimestampToExternalDateFormat($timestamp);
 
         return $dateCreated;
     }

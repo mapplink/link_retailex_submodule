@@ -51,9 +51,9 @@ abstract class AbstractGateway extends BaseAbstractGateway
 
     /**
      * @param int $timestamp
-     * @return bool|string $date
+     * @return string $date
      */
-    protected function convertTimestampToRetailexDateFormat($timestamp)
+    protected function convertTimestampToExternalDateFormat($timestamp)
     {
         $date = date('Y-m-d', $timestamp).'T'.date('H:i:s', $timestamp).'Z';
 
