@@ -335,7 +335,7 @@ class ProductGateway extends AbstractGateway
                 $productData = array_replace_recursive(
                     $this->getMappedData('product', $this->productAttributeMap, $retailExpressProductData),
                     $this->getMappedData('product', $this->productAttributeMapOptional, $retailExpressProductData, FALSE),
-                    $this->getMappedData('product', $this->productAttributeCustom, $retailExpressData)
+                    $this->getMappedData('product', $this->productAttributeCustom, $retailExpressProductData)
                 );
 
                 $this->getServiceLocator()->get('logService')->log(
@@ -475,12 +475,12 @@ class ProductGateway extends AbstractGateway
                 $error = $value = NULL;
 
                 if (!($isConfigurable && in_array($localCode, $this->configurableAttributesToRemove))) {
-                    if (is_int($localCode) && is_string($code) && array_key_exists($code, $data)) {
-                        $value = $data[$code];
+                    if (is_int($localCode) && is_string($code) && array_key_exists($code, $sanitisedData)) {
+                        $value = $sanitisedData[$code];
 
                     }elseif ((is_string($code) || is_array($code) && count($code) > 1)
-                      && array_key_exists($localCode, $data)) {
-                        $value = $data[$localCode];
+                      && array_key_exists($localCode, $sanitisedData)) {
+                        $value = $sanitisedData[$localCode];
 
                     }elseif (is_array($code) && count($code) == 1) {
                         $method = current($code);
@@ -488,7 +488,7 @@ class ProductGateway extends AbstractGateway
 
                         try{
                             if (method_exists('Retailex\Gateway\ProductGateway', $method)) {
-                                $value = self::$method($data[$localCode]);
+                                $value = self::$method($sanitisedData[$localCode]);
                             }else {
                                 $error = 'Mapping method '.$method.' is not existing.';
                             }
@@ -523,16 +523,8 @@ class ProductGateway extends AbstractGateway
         }
 
         $logMessage = 'Mapped data on '.$entityType.'.';
-        $logData = array('map'=>$map,
-            'data skus'=>array_keys($data),
-            'data (f6l6)'=>array_merge(array_slice($data, 0, 6), array_slice($data, -6)),
-            'sanitised (f6l6)'=>array_merge(array_slice($sanitisedData, 0, 6), array_slice($sanitisedData, -6)),
-            'mapped (f6l6)'=>array_merge(array_slice($mappedData, 0, 6), array_slice($mappedData, -6))
-        );
+        $logData = array('map'=>$map, 'data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
         $logService->log(LogService::LEVEL_DEBUG, $logCode, $logMessage, $logData);
-
-        $logData = array('data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
-//        $logService->log(LogService::LEVEL_DEBUGEXTRA, $logCode, $logMessage.' (All Data)', $logData);
 
         return $mappedData;
     }
