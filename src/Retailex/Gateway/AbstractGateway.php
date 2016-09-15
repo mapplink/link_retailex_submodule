@@ -22,15 +22,10 @@ abstract class AbstractGateway extends BaseAbstractGateway
     const GATEWAY_ENTITY_CODE = 'gey';
     const GATEWAY_ENTITY = 'generic';
 
-
     /** @var \Entity\Service\EntityConfigService $this->entityConfigService */
     protected $entityConfigService = NULL;
     /** @var \Retailex\Api\Soap $this->soap */
     protected $soap = NULL;
-    /** @var int $lastRetrieveTimestamp */
-    protected $lastRetrieveTimestamp = NULL;
-    /** @var int $newRetrieveTimestamp */
-    protected $newRetrieveTimestamp = NULL;
 
 
     /**
@@ -55,42 +50,14 @@ abstract class AbstractGateway extends BaseAbstractGateway
     }
 
     /**
-     * @return int $this->newRetrieveTimestamp
+     * @param int $timestamp
+     * @return bool|string $date
      */
-    protected function getNewRetrieveTimestamp()
-    {
-        if ($this->newRetrieveTimestamp === NULL) {
-            $this->newRetrieveTimestamp = $this->getRetrieveTimestamp();
-        }
-
-        return $this->newRetrieveTimestamp;
-    }
-
-    /** @param int $timestamp
-     * @return bool|string $date */
     protected function convertTimestampToRetailexDateFormat($timestamp)
     {
         $date = date('Y-m-d', $timestamp).'T'.date('H:i:s', $timestamp).'Z';
 
         return $date;
-    }
-
-    /** @return bool|string $lastRetrieve */
-    protected function getLastRetrieveDate()
-    {
-        $lastRetrieve = $this->convertTimestampToRetailexDateFormat($this->getLastRetrieveTimestamp());
-        return $lastRetrieve;
-    }
-
-    /** @return bool|int $this->lastRetrieveTimestamp */
-    protected function getLastRetrieveTimestamp()
-    {
-        if ($this->lastRetrieveTimestamp === NULL) {
-            $this->lastRetrieveTimestamp =
-                $this->_nodeService->getTimestamp($this->_nodeEntity->getNodeId(), static::GATEWAY_ENTITY, 'retrieve');
-        }
-
-        return $this->lastRetrieveTimestamp;
     }
 
 }
