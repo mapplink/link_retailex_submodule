@@ -496,7 +496,7 @@ class ProductGateway extends AbstractGateway
                             $error = $exception->getMessage();
                         }
                     }else{
-                        $error = 'Error on product/stockitem data mapping.';
+                        $error = 'Error on '.$entityType.' data mapping.';
                     }
 
                     if (is_string($code) && strlen($code) > 0 && isset($value) && !isset($error)) {
