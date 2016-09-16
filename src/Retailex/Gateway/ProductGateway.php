@@ -539,97 +539,104 @@ class ProductGateway extends AbstractGateway
      */
     protected function processProductUpdate($localId, $sku, $storeId, $parentId, array $data)
     {
+        $storeId = 0; // ToDo: Review this preset
         $needsUpdate = TRUE;
+        $localProductId = NULL;
 
-        $existingEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'product', 0, $sku);
+        /** @var Product $product */
+        $product = $this->_entityService->loadEntity($this->_node->getNodeId(), 'product', $storeId, $sku);
 
-        if (!$existingEntity) {
-            $existingEntity = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'product', 0, $localId);
-            if (! $existingEntity instanceof Product || $existingEntity->getUniqueId() != $sku) {
-                $existingEntity = NULL;
-            }
+        if ($product) {
+            $localProductId = $this->_entityService->getLocalId($this->_node->getNodeId(), $product);
+            $relink = !is_null($localProductId);
 
-            if (!$existingEntity) {
-                $noneOrWrongLocalId = TRUE;
-                $data = array_replace($this->mappedCreateProductDataPreset, $data);
-                $existingEntity = $this->_entityService
-                    ->createEntity($this->_node->getNodeId(), 'product', 0, $sku, $data, $parentId);
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $localId);
-                $this->getServiceLocator()->get('logService')
-                    ->log(LogService::LEVEL_INFO,
-                        'rex_p_re_new',
-                        'New product '.$sku,
-                        array('sku'=>$sku),
-                        array('node'=>$this->_node, 'entity'=>$existingEntity)
-                    );
-                try{
-                    $stockEntity = $this->_entityService
-                        ->createEntity($this->_node->getNodeId(), 'stockitem', 0, $sku, array(), $existingEntity);
-                    $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $localId);
-                }catch (\Exception $exception) {
-                    $this->getServiceLocator() ->get('logService')
-                        ->log(LogService::LEVEL_WARN,
-                            'rex_p_re_si_ex',
-                            'Already existing stockitem for new product '.$sku,
-                            array('sku'=>$sku),
-                            array('node'=>$this->_node, 'entity'=>$existingEntity)
-                        );
-                }
-                $needsUpdate = FALSE;
-            }else{
-                $noneOrWrongLocalId = FALSE;
-                $this->getServiceLocator() ->get('logService')
-                    ->log(LogService::LEVEL_INFO,
-                        'rex_p_re_local',
-                        'Retrieved product '.$sku.' by local id',
-                        array('sku'=>$sku, 'local id'=>$localId),
-                        array('node'=>$this->_node, 'entity'=>$existingEntity)
-                    );
-            }
         }else{
-            $storedLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
-            $noneOrWrongLocalId = ($localId != $storedLocalId);
+            $product = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'product', $storeId, $localId);
 
-            if ($noneOrWrongLocalId) {
-                $relink = !is_null($storedLocalId);
-                if ($relink) {
-                    $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
-                }
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $localId);
+            if (!$product instanceof Product || $product->getUniqueId() != $sku) {
+                $relink = TRUE;
+                $product = NULL;
+            }else{
+                $relink = FALSE;
+            }
 
-                $stockEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', 0, $sku);
+            if ($product) {
+                $this->getServiceLocator() ->get('logService')->log(LogService::LEVEL_INFO,
+                    'rex_p_re_local',
+                    'Retrieved product '.$sku.' by local id',
+                    array('sku'=>$sku, 'local id'=>$localId),
+                    array('node'=>$this->_node, 'product'=>$product)
+                );
+            }else{
+                $data = array_replace($this->mappedCreateProductDataPreset, $data);
+                try{
+                    $product = $this->_entityService
+                        ->createEntity($this->_node->getNodeId(), 'product', $storeId, $sku, $data, $parentId);
+                    $needsUpdate = FALSE;
 
-                if (!is_null($this->_entityService->getLocalId($this->_node->getNodeId(), $stockEntity))) {
-                    $relink = TRUE;
-                    $this->_entityService->unlinkEntity($this->_node->getNodeId(), $stockEntity);
-                }
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $stockEntity, $localId);
-
-                if ($relink) {
-                    $this->getServiceLocator()->get('logService')
-                        ->log(LogService::LEVEL_WARN, 'rex_p_re_relink',
-                            'Incorrectly linked product/stockitem '.$sku.'. Re-linked now.',
-                            array('code'=>$sku, 'wrong local id'=>$storedLocalId, 'correct local id'=>$localId),
-                            array('node'=>$this->_node, 'entity'=>$existingEntity)
-                        );
+                    $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO,
+                        'rex_p_re_new',
+                        'Created new product '.$sku.' from node '.$this->_node->getNodeId(),
+                        array('sku'=>$sku), array('product'=>$product)
+                    );
+                }catch(\Exception $exception){
+                    $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_WARN,
+                        'rex_p_re_lk_ex',
+                        'Issue when creating and linking new product '.$sku.' from node '.$this->_node->getNodeId(),
+                        array('sku'=>$sku, 'exception'=>$exception->getMessage())
+                    );
                 }
             }
+        }
+
+        if ($product instanceof Product) {
+            $stockitem = $this->_entityService
+                ->loadEntity($this->_node->getNodeId(), 'stockitem', $storeId, $sku);
+
+            if (!$stockitem) {
+                try{
+                    $stockitem = $this->_entityService
+                        ->createEntity($this->_node->getNodeId(), 'stockitem', $storeId, $sku, array(), $product);
+                    $this->_entityService->linkEntity($this->_node->getNodeId(), $stockitem, $localId);
+
+                    $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO,
+                        'rex_p_re_si',
+                        'Created and linked empty stockitem '.$sku.' from node '.$this->_node->getNodeId(),
+                        array('sku'=>$sku, 'exception'=>$exception->getMessage()),
+                        array('entity'=>$product)
+                    );
+                }catch(\Exception $exception){
+                    $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_WARN,
+                        'rex_p_re_si_ex',
+                        'Exception during the stockitem creation/link ('.$sku.') from node '.$this->_node->getNodeId(),
+                        array('sku'=>$sku, 'exception'=>$exception->getMessage())
+                    );
+                }
+            }
+        }
+
+        $noneOrWrongLocalId = (is_null($localProductId) || $localId != $localProductId);
+        if ($noneOrWrongLocalId) {
+            if ($relink) {
+                $this->_entityService->unlinkEntity($this->_node->getNodeId(), $product);
+            }
+            $this->_entityService->linkEntity($this->_node->getNodeId(), $product, $localId);
+        }
+
+        if ($needsUpdate) {
+            $data = array_replace($this->mappedUpdateProductDataPreset, $data);
+            $this->_entityService->updateEntity($this->_node->getNodeId(), $product, $data, FALSE);
 
             $this->getServiceLocator()->get('logService')
                 ->log(LogService::LEVEL_INFO,
                     'rex_p_re_upd',
                     'Updated product '.$sku,
                     array('sku'=>$sku),
-                    array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
+                    array('node'=>$this->_node, 'product'=>$product, 'data'=>$data)
                 );
         }
 
-        if ($needsUpdate) {
-            $data = array_replace($this->mappedUpdateProductDataPreset, $data);
-            $this->_entityService->updateEntity($this->_node->getNodeId(), $existingEntity, $data, FALSE);
-        }
-
-        return $existingEntity;
+        return $product;
     }
 
     /**
@@ -642,56 +649,87 @@ class ProductGateway extends AbstractGateway
      */
     protected function processStockUpdate($productLocalId, $sku, $storeId, $parentId, array $data)
     {
+        $storeId = 0; // ToDo: Review this preset
         $needsUpdate = TRUE;
+        $link = $relink = FALSE;
 
-        $existingEntity = $this->_entityService
-            ->loadEntityLocal($this->_node->getNodeId(), 'stockitem', 0, $productLocalId);
-        if (!$existingEntity) {
-            $existingEntity = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', 0, $sku);
-            $noneOrWrongLocalId = $this->_entityService->getLocalId($this->_node->getNodeId(), $existingEntity);
+        $stockitem = $this->_entityService
+            ->loadEntityLocal($this->_node->getNodeId(), 'stockitem', $storeId, $productLocalId);
 
-            if (!$existingEntity) {
-                $this->getServiceLocator() ->get('logService')->log(LogService::LEVEL_WARN,
-                    'rex_si_noex',
-                    'Stockitem is not existing.',
-                    array('sku'=>$sku),
-                    array('node'=>$this->_node, 'data'=>$data)
-                );
-                $needsUpdate = FALSE;
-            }elseif ($noneOrWrongLocalId != NULL) {
-                $this->_entityService->unlinkEntity($this->_node->getNodeId(), $existingEntity);
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productLocalId);
-
-                $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR,
-                    'rex_si_relink',
-                    'Incorrectly linked stockitem '.$sku.' ('.$noneOrWrongLocalId.'). Re-linked now.',
-                    array('code'=>$sku, 'wrong local id'=>$noneOrWrongLocalId),
-                    array('node'=>$this->_node, 'entity'=>$existingEntity)
-                );
-            }else{
-                $this->getServiceLocator() ->get('logService')->log(LogService::LEVEL_INFO,
-                    'rex_si_link',
-                    'Unlinked stockitem '.$sku,
-                    array('sku'=>$sku),
-                    array('node'=>$this->_node, 'entity'=>$existingEntity)
-                );
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $existingEntity, $productLocalId);
-            }
+        if ($stockitem && $stockitem->getUniqueId() == $sku) {
+            $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $stockitem);
+            $relink = ($productLocalId != $localId);
         }else{
-            $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_INFO,
-                    'rex_si_re_upd',
-                    'Updated stockitem '.$sku,
-                    array('sku'=>$sku),
-                    array('node'=>$this->_node, 'entity'=>$existingEntity, 'data'=>$data)
+            $stockitem = $this->_entityService->loadEntity($this->_node->getNodeId(), 'stockitem', $storeId, $sku);
+
+            if ($stockitem) {
+                $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $stockitem);
+                $relink = !is_null($localId);
+            }else{
+                $this->getServiceLocator() ->get('logService')->log(LogService::LEVEL_WARN,
+                    'rex_si_re_noex',
+                    'Stockitem is not existing. Creating now.',
+                    array('sku'=>$sku, 'data'=>$data, 'node id'=>$this->_node->getNodeId())
                 );
+
+                try{
+                    $stockitem = $this->_entityService
+                        ->createEntity($this->_node->getNodeId(), 'stockitem', $storeId, $sku, array());
+                    $link = TRUE;
+                }catch(\Exception $exception){
+                    $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_WARN,
+                        'rex_si_re_ex',
+                        'Exception during the stockitem creation/link ('.$sku.') from node '.$this->_node->getNodeId(),
+                        array('sku'=>$sku, 'exception'=>$exception->getMessage())
+                    );
+                }
+
+                $needsUpdate = FALSE;
+            }
+        }
+
+        if ($link || $relink) {
+            try {
+                if ($relink) {
+                    $this->_entityService->unlinkEntity($this->_node->getNodeId(), $stockitem);
+                }
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $stockitem, $productLocalId);
+
+                if ($relink) {
+                    $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_WARN,
+                        'rex_si_re_linkre',
+                        'Relinked incorrectly linked stockitem '.$sku.' on node '.$this->_node->getNodeId().'.',
+                        array('sku'=>$sku, 'local id'=>$productLocalId, 'wrong local id'=>$localId)
+                    );
+                }else{
+                    $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO,
+                        'rex_si_re_link',
+                        'Linked stockitem '.$sku.' on node '.$this->_node->getNodeId().'.',
+                        array('sku'=>$sku)
+                    );
+                }
+            }catch(\Exception $exception){
+                $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_WARN,
+                    'rex_si_link_ex',
+                    'Exception during the stockitem link ('.$sku.') onnode '.$this->_node->getNodeId(),
+                    array('sku'=>$sku, 'exception'=>$exception->getMessage())
+                );
+            }
         }
 
         if ($needsUpdate) {
-            $this->_entityService->updateEntity($this->_node->getNodeId(), $existingEntity, $data, FALSE);
+            $this->_entityService->updateEntity($this->_node->getNodeId(), $stockitem, $data, FALSE);
+
+            $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO,
+                'rex_si_re_upd',
+                'Updated stockitem '.$sku.' from node '.$this->_node->getNodeId(),
+                array('sku'=>$sku, 'data'=>$data), array('stockitem'=>$stockitem)
+            );
+        }else{
+
         }
 
-        return $existingEntity;
+        return $stockitem;
     }
 
     /**
