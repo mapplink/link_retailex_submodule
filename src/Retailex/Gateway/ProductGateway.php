@@ -602,8 +602,7 @@ class ProductGateway extends AbstractGateway
                     $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO,
                         'rex_p_re_si',
                         'Created and linked empty stockitem '.$sku.' from node '.$this->_node->getNodeId(),
-                        array('sku'=>$sku, 'exception'=>$exception->getMessage()),
-                        array('entity'=>$product)
+                        array('sku'=>$sku)
                     );
                 }catch(\Exception $exception){
                     $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_WARN,
