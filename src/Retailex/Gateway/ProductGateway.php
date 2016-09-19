@@ -286,12 +286,8 @@ class ProductGateway extends AbstractGateway
                     continue;
                 }
 
-                $matrixProduct = isset($retailExpressDataRow['MatrixProduct']);
+                $createConfigurable = $matrixProduct = isset($retailExpressDataRow['MatrixProduct']);
                 $configurableSku = self::getSku($retailExpressDataRow['Code']);
-                $createConfigurable = $matrixProduct && $retailExpressDataRow['MatrixProduct'] != 0
-                    || $matrixProduct &&
-                        (!$this->_entityService->loadEntity($this->_node->getNodeId(), 'product', 0, $configurableSku)
-                            || !isset($retailExpressData[$configurableSku]));
 
                 if ($createConfigurable) {
                     $stockOnHand = 0;
@@ -459,14 +455,15 @@ class ProductGateway extends AbstractGateway
         self::sanitiseData($sanitisedData);
         $mappedData = $this->mappedDataPreset;
 
-        $logCode = 'rex_p_re_map';
         $logService = $this->getServiceLocator()->get('logService');
 
         if ($entityType == 'product') {
+            $logCode = 'rex_p_re_map';
             if ($isConfigurable = $this->isConfigurable($data)) {
                 $mappedData['type'] = Product::TYPE_CONFIGURABLE;
             }
         }else{
+            $logCode = 'rex_si_re_map';
             $isConfigurable = FALSE;
         }
 
