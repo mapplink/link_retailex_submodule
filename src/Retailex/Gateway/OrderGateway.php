@@ -400,7 +400,7 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
      */
     protected function getOrderTotal(Order $order)
     {
-        return $order->getOrderTotalInclShipping();
+        return number_format(round($order->getOrderTotalInclShipping(), 2), 2, '.', '');
     }
 
     /**
