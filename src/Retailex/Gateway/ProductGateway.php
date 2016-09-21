@@ -31,7 +31,7 @@ class ProductGateway extends AbstractGateway
     /** @var array $this->productAttributeMap */
     protected $productAttributeMap = array(
 //        'ProductId'=>array('sku'=>'getSku'),
-        'Description'=>array('name', 'description'),
+        'Description'=>'name',
         'SizeId'=>array('size'=>'getSize'),
         'ColourId'=>array('color'=>'getColour'),
 //        'ManageStock'=>NULL,
