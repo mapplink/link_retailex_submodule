@@ -123,7 +123,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
         }else{
             $success = $this->initCurl() !== FALSE;
 
-            $logCode = 'rex_isocu';
+            $logCode = 'rex_socu_i';
             $logData = array('base curl options'=>$this->curlOptions);
 
             if ($success) {
@@ -147,7 +147,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
      * @param bool $setPrefix
      * @return string
      */
-    protected static function getXmlElementString($data, $setPrefix = TRUE)
+    protected function getXmlElementString($data, $setPrefix = TRUE)
     {
         $elementString = '';
 
@@ -158,7 +158,10 @@ class SoapCurl implements ServiceLocatorAwareInterface
         }
 
         foreach ($data as $key=>$value) {
-            if (isset($value) && strlen((string) $value)) {
+            if (isset($value) && !is_scalar($value)) {
+                $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR,
+                    'rex_socu_xmlerr', 'Value for XML is not scalar.', array('key'=>$key, 'value'=>$value));
+            }elseif (isset($value) && strlen((string) $value)) {
                 if (strpos($key, '<') !== FALSE) {
                     $key = strstr($key, '<', TRUE);
                 }
@@ -175,7 +178,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
                         $postfix = '';
                     }
 
-                    $elementString .= self::getXmlElementString($value, $setPrefix).$postfix;
+                    $elementString .= $this->getXmlElementString($value, $setPrefix).$postfix;
                 }else{
                     $elementString .= $value;
                 }
@@ -213,7 +216,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
             $allHeaderFieldsSet = $allHeaderFieldsSet && (strlen($curlHeader) > 0);
         }
 
-        $soapBody = self::getXmlElementString($data);
+        $soapBody = $this->getXmlElementString($data);
         $preparationSuccessful = $allHeaderFieldsSet && strlen($soapBody) > 0;
 
         if ($preparationSuccessful) {
