@@ -157,7 +157,10 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
 
         }elseif (!isset($localId)) {
             $call = 'OrderCreateByChannel';
-            $data = array('OrderXML'=>array('Orders'=>array('Order'=>$this->getOrderCreateData($entity))));
+            $data = array(
+                'OrderXML'=>array('Orders'=>array('Order'=>$this->getOrderCreateData($entity))),
+                'ChannelId'=>$this->_node->getConfig('retailex-channel')
+            );
 
             $logData['soap data'] = $data;
 
