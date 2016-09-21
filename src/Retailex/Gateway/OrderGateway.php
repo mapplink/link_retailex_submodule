@@ -134,20 +134,6 @@ class OrderGateway extends AbstractGateway
     {
 $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_o_re_no', 'Order retrieval not implemented yet.', array());return 0;$retailExpressData = 0;
 
-        if (count($retailExpressData) > 0) {
-            $this->_nodeService
-                ->setTimestamp($this->_nodeEntity->getNodeId(), 'order', 'retrieve', $this->getNewRetrieveTimestamp());
-        }
-
-        $seconds = ceil(time() - $this->getNewRetrieveTimestamp());
-        $message = 'Retrieved '.count($retailExpressDataById).' order in '.$seconds.'s up to '
-            .strftime('%H:%M:%S, %d/%m', $this->retrieveTimestamp).' via '.$api.' api.';
-        $logData = array('type'=>'order', 'amount created/updated'=>count($retailExpressData), 'period [s]'=>$seconds);
-        if (count($retailExpressData) > 0) {
-            $logData['per entity [s]'] = round($seconds / count($retailExpressData), 3);
-        }
-        $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_o_re_no', $message, $logData);
-
         return count($retailExpressData);
     }
 
