@@ -59,24 +59,24 @@ class OrderGateway extends AbstractGateway
 
     /** @var array $this->createOrderBillingAttributeMap */
     protected $createOrderBillingAttributeMap = array(
-        'BillFirstName'=>'first_name',
-        'BillLastName'=>'last_name',
-        //'BillAddress'=>'street',
-        'BillCompany'=>'company',
-        'BillPhone'=>'telephone',
-        'BillPostCode'=>'postcode',
-        'BillState'=>'region',
-        'BillCountry'=>'country_code'
+        'BillFirstName'=>array('first_name'),
+        'BillLastName'=>array('last_name'),
+        //'BillAddress'=>array('street'),
+        'BillCompany'=>array('company'),
+        'BillPhone'=>array('telephone'),
+        'BillPostCode'=>array('postcode'),
+        'BillState'=>array('region'),
+        'BillCountry'=>array('country_code')
     );
     /** @var array $this->createOrderShippingAttributeMap */
     protected $createOrderShippingAttributeMap = array(
-        'DelCompany'=>'company',
+        'DelCompany'=>array('company'),
         'DelAddress'=>array('street'=>'getDeliveryAddress'),
         'DelSuburb'=>array('{entity}'=>'getDeliverySuburb'),
-        'DelPhone'=>'telephone',
-        'DelPostCode'=>'postcode',
-        'DelState'=>'region',
-        'DelCountry'=>'country_code'
+        'DelPhone'=>array('telephone'),
+        'DelPostCode'=>array('postcode'),
+        'DelState'=>array('region'),
+        'DelCountry'=>array('country_code')
     );
 
     /** @var array $this->methodById */
@@ -554,7 +554,7 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
                 ->log(LogService::LEVEL_ERROR, $logCode.'_bad_err', 'Billing address missing.', $logData);
         }else{
             foreach ($this->createOrderBillingAttributeMap as $localCode=>$code) {
-                $createData[$localCode] = $billingAddress->getData($code, NULL);
+                $this->assignData($billingAddress, $createData, $localCode, $code);
             }
         }
 
@@ -563,7 +563,7 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
                 ->log(LogService::LEVEL_ERROR, $logCode.'_sad_err', 'Shipping address missing.', $logData);
         }else{
             foreach ($this->createOrderShippingAttributeMap as $localCode=>$code) {
-                $createData[$localCode] = $shippingAddress->getData($code, NULL);
+                $this->assignData($shippingAddress, $createData, $localCode, $code);
             }
         }
 
