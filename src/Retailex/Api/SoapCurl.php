@@ -158,10 +158,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
         }
 
         foreach ($data as $key=>$value) {
-            if (isset($value) && !is_scalar($value)) {
-                $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_ERROR,
-                    'rex_socu_xmlerr', 'Value for XML is not scalar.', array('key'=>$key, 'value'=>$value));
-            }elseif (isset($value) && strlen((string) $value)) {
+            if (isset($value) && (is_scalar($value) && strlen((string) $value) > 0 || is_array($value))) {
                 if (strpos($key, '<') !== FALSE) {
                     $key = strstr($key, '<', TRUE);
                 }
