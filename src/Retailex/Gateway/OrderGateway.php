@@ -376,7 +376,7 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
      */
     protected function getLocalId($entity)
     {
-        if ((int) $entity == $entity || is_a($entity, '\Entity\Entity')) {
+        if (is_a($entity, '\Entity\Entity') || (is_scalar($entity) && (int) $entity == $entity)) {
             $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $entity);
         }else{
             $localId = NULL;
