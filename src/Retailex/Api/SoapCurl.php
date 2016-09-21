@@ -158,28 +158,30 @@ class SoapCurl implements ServiceLocatorAwareInterface
         }
 
         foreach ($data as $key=>$value) {
-            if (strpos($key, '<') !== FALSE) {
-                $key = strstr($key, '<', TRUE);
-            }
-            $elementString .= '<'.$prefix.$key.'>';
+            if (isset($value) && strlen((string) $value)) {
+                if (strpos($key, '<') !== FALSE) {
+                    $key = strstr($key, '<', TRUE);
+                }
+                $elementString .= '<'.$prefix.$key.'>';
 
-            if (isset($value) && is_array($value)) {
-                $xml = substr($key, -3) == 'XML';
+                if (isset($value) && is_array($value)) {
+                    $xml = substr($key, -3) == 'XML';
 
-                if ($xml) {
-                    $setPrefix = FALSE;
-                    $elementString .= '<![CDATA[';
-                    $postfix = ']]>';
-                }else {
-                    $postfix = '';
+                    if ($xml) {
+                        $setPrefix = FALSE;
+                        $elementString .= '<![CDATA[';
+                        $postfix = ']]>';
+                    }else {
+                        $postfix = '';
+                    }
+
+                    $elementString .= self::getXmlElementString($value, $setPrefix).$postfix;
+                }else{
+                    $elementString .= $value;
                 }
 
-                $elementString .= self::getXmlElementString($value, $setPrefix).$postfix;
-            }else{
-                $elementString .= $value;
+                $elementString .= '</'.$prefix.$key.'>';
             }
-
-            $elementString .= '</'.$prefix.$key.'>';
         }
 
         return $elementString;
