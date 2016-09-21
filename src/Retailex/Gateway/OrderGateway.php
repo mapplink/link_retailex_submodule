@@ -27,7 +27,7 @@ class OrderGateway extends AbstractGateway
     const GATEWAY_ENTITY = 'order';
     const GATEWAY_ENTITY_CODE = 'o';
 
-    /** @var array $this->billingAttributeMapping */
+    /** @var array $this->createOrderAttributeMap */
     protected $createOrderAttributeMap = array(
 //        'ExternalOrderId'=>array('UNIQUE_ID'=>NULL), // string key: method
         'DateCreated'=>array('placed_at'=>'getDateCreated'),
@@ -38,6 +38,7 @@ class OrderGateway extends AbstractGateway
         'BillEmail'=>array('customer_email'), // int key: attribute
         'ReceiverNews'=>0
     );
+    /** @var array $this->createOrderOrderitemsAttributeMap */
     protected $createOrderOrderitemsAttributeMap = array(
         'ProductId'=>array('product'=>'getLocalId'),
         'QtyOrdered'=>array('{entity}'=>'getDeliveryQuantity'),
@@ -56,7 +57,7 @@ class OrderGateway extends AbstractGateway
         'DateCreated'=>array('placed_at')
     );
 
-    /** @var array $this->billingAttributeMapping */
+    /** @var array $this->createOrderBillingAttributeMap */
     protected $createOrderBillingAttributeMap = array(
         'BillFirstName'=>'first_name',
         'BillLastName'=>'last_name',
@@ -67,7 +68,7 @@ class OrderGateway extends AbstractGateway
         'BillState'=>'region',
         'BillCountry'=>'country_code'
     );
-    /** @var array $this->shippingAttributeMapping */
+    /** @var array $this->createOrderShippingAttributeMap */
     protected $createOrderShippingAttributeMap = array(
         'DelCompany'=>'company',
         'DelAddress'=>'street',
