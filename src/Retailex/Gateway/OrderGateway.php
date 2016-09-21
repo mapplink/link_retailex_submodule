@@ -71,8 +71,8 @@ class OrderGateway extends AbstractGateway
     /** @var array $this->createOrderShippingAttributeMap */
     protected $createOrderShippingAttributeMap = array(
         'DelCompany'=>'company',
-        'DelAddress'=>'street',
-        //'DelSuburb'=>'street',
+        'DelAddress'=>array('street'=>'getDeliveryAddress'),
+        'DelSuburb'=>array('{entity}'=>'getDeliverySuburb'),
         'DelPhone'=>'telephone',
         'DelPostCode'=>'postcode',
         'DelState'=>'region',
@@ -382,6 +382,33 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
             $localId = NULL;
         }
         return $localId;
+    }
+
+    /**
+     * @param string $street
+     * @return string $deliveryAddress
+     */
+    protected function getDeliveryAddress($street)
+    {
+        $address = strtok(strtok($street, "\r"), "\n");
+        return $address;
+    }
+
+    /**
+     * @param Entity $entity
+     * @return string $deliverySuburb
+     */
+    protected function getDeliverySuburb(Entity $entity)
+    {
+        $streetArray = explode("\n", str_replace(array("\r", "\n"), "\n", $entity->getData('street', '')));
+
+        if (count($streetArray) > 1 && strlen($streetArray[count($streetArray) - 1]) > 0) {
+            $suburb = array_pop($streetArray);
+        }else{
+            $suburb = $entity->getData('city', '-');
+        }
+
+        return $suburb;
     }
 
     /**
