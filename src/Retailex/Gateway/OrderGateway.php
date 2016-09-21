@@ -417,7 +417,16 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
      */
     protected function getOrderTotal(Order $order)
     {
-        return number_format(round($order->getOrderTotalInclShipping(), 2), 2, '.', '');
+        return round($order->getOrderTotalInclShipping(), 2);
+    }
+
+    /**
+     * @param Orderitem $orderitem
+     * @return float $discountedPrice
+     */
+    protected function getDiscountedPrice(Orderitem $orderitem)
+    {
+        return round($orderitem->getDiscountedPrice(), 2);
     }
 
     /**
