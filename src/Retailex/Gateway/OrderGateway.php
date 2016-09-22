@@ -390,7 +390,11 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
      */
     protected function getDeliveryAddress($street)
     {
+        if (is_array($street)) {
+            $street = implode("\n", $street);
+        }
         $address = strtok(strtok($street, "\r"), "\n");
+
         return $address;
     }
 
@@ -400,7 +404,11 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
      */
     protected function getDeliverySuburb(Entity $entity)
     {
-        $streetArray = explode("\n", str_replace(array("\r", "\n"), "\n", $entity->getData('street', '')));
+        $street = $entity->getData('street', '');
+        if (is_array($street)) {
+            $street = implode("\n", $street);
+        }
+        $streetArray = explode("\n", str_replace(array("\r", "\n"), "\n", $street));
 
         if (count($streetArray) > 1 && strlen($streetArray[count($streetArray) - 1]) > 0) {
             $suburb = array_pop($streetArray);
@@ -417,7 +425,7 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
      */
     protected function getOrderTotal(Order $order)
     {
-        return round($order->getOrderTotalInclShipping(), 2);
+        return number_format(round($order->getOrderTotalInclShipping(), 2), 2, '.', '');
     }
 
     /**
@@ -426,7 +434,7 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
      */
     protected function getDiscountedPrice(Orderitem $orderitem)
     {
-        return round($orderitem->getDiscountedPrice(), 2);
+        return number_format(round($orderitem->getDiscountedPrice(), 2), 2, '.', '');
     }
 
     /**
