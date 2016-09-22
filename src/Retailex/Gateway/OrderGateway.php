@@ -165,13 +165,13 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
             $logData['soap data'] = $data;
 
             try{
-                $response = $this->soap->call($call, $data);
-                $logData['response'] = $response;
+                $responseXML = $this->soap->call($call, $data);
+                $logData['response'] = $responseXML;
 
-                if (is_null($response)) {
+                if (is_null($responseXML)) {
                     throw new SyncException($call.' returned NULL.');
                 }else{
-                    $orderResponse = current($response->xpath('//Order'));
+                    $orderResponse = (array) current($responseXML->xpath('//Order'));
                     $success = ($orderResponse['Result'] == 'Success');
                     $message = '';
                 }
