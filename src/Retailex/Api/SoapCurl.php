@@ -201,19 +201,21 @@ class SoapCurl implements ServiceLocatorAwareInterface
         $retailexConfigService = $this->getServiceLocator()->get('retailexConfigService');
         $headerConfigMap = $retailexConfigService->getSoapheaderConfigMap();
 
-        $curlHeaders = array();
+        $curlHeaders = $soapHeaderArray = array();
         $allHeaderFieldsSet = TRUE;
         if (isset($this->baseCurlOptions[CURLOPT_HTTPHEADER])) {
             $curlHeaders = $this->baseCurlOptions[CURLOPT_HTTPHEADER];
         }
 
         foreach ($headerConfigMap as $headerKey=>$configKey) {
-            $curlHeader = $headerKey.': '.$this->node->getConfig($configKey);
+            $value = $this->node->getConfig($configKey);
+            $curlHeader = $headerKey.': '.$value;
+            $soapHeaderArray[$headerKey] = $value;
             $curlHeaders[] = $curlHeader;
             $allHeaderFieldsSet = $allHeaderFieldsSet && (strlen($curlHeader) > 0);
         }
 
-        $soapHeader = $this->getXmlElementString($headerConfigMap);
+        $soapHeader = $this->getXmlElementString($soapHeaderArray);
         $soapBody = $this->getXmlElementString($data);
         $preparationSuccessful = $allHeaderFieldsSet && strlen($soapHeader) > 0 && strlen($soapBody) > 0;
 
