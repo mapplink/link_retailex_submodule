@@ -12,8 +12,8 @@ namespace Retailex\Api;
 
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
-use MyProject\Proxies\__CG__\stdClass;
 use Retailex\Node;
+use Retailex\Service\RetailexConfigService;
 use Zend\Http\Request;
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
@@ -213,19 +213,22 @@ class SoapCurl implements ServiceLocatorAwareInterface
             $allHeaderFieldsSet = $allHeaderFieldsSet && (strlen($curlHeader) > 0);
         }
 
+        $soapHeader = $this->getXmlElementString($headerConfigMap);
         $soapBody = $this->getXmlElementString($data);
-        $preparationSuccessful = $allHeaderFieldsSet && strlen($soapBody) > 0;
+        $preparationSuccessful = $allHeaderFieldsSet && strlen($soapHeader) > 0 && strlen($soapBody) > 0;
 
         if ($preparationSuccessful) {
-            $soapBody = '<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ret="'
-                .self::SOAP_NAMESPACE.'"><soap:Body><ret:'.$call.'>'.$soapBody.'</ret:'.$call.'></soap:Body>'
+            $soapEnvelope = '<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ret="'
+                .self::SOAP_NAMESPACE.'">'
+                    .'<soap:Header><ret:ClientHeader>'.$soapHeader.'</ret:ClientHeader></soap:Header>'
+                    .'<soap:Body><ret:'.$call.'>'.$soapBody.'</ret:'.$call.'></soap:Body>'
                 .'</soap:Envelope>';
             $this->curlOptions = array_replace_recursive(
                 $this->baseCurlOptions,
                 array(
                     CURLOPT_URL=>$url,
                     CURLOPT_HTTPHEADER=>$curlHeaders,
-                    CURLOPT_POSTFIELDS=>$soapBody
+                    CURLOPT_POSTFIELDS=>$soapEnvelope
                 )
             );
             curl_setopt_array($this->curlHandle, $this->curlOptions);
@@ -336,7 +339,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
                         $logData['error'] = $error;
                     }
 
-                    $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $logMessage, $logData);
+//                    $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $logMessage, $logData);
                 }
             }catch (MagelinkException $exception) {
                 $success = FALSE;
@@ -355,7 +358,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
             $responseXml = NULL;
         }else{
             $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_DEBUG, 'rex_socu_success', 'Successful soap curl call: '.$call,
+                ->log(LogService::LEVEL_INFO, 'rex_socu_success', 'Successful soap curl call: '.$call,
                     array('call'=>$call, 'data'=>$data, 'response'=>mb_substr($response, 0, 1024)));
         }
 
