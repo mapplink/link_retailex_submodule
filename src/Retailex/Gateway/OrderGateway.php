@@ -173,42 +173,54 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
                     throw new SyncException($call.' returned NULL.');
                 }else{
                     $orderResponse = (array) current($responseXML->xpath('//Order'));
-                    $success = ($orderResponse['Result'] == 'Success');
+                    $orderitemResponse = (array) current($responseXML->xpath('//OrderItem'));
+
+                    $orderSuccess = ($orderResponse['Result'] == 'Success');
+                    $orderitemSuccess = ($orderitemResponse['Result'] == 'Success');
+                    $success = $orderSuccess && $orderitemSuccess;
+
                     $message = '';
+                    if ($orderLocalId = isset($orderResponse['OrderId'])) {
+                        $localId = $logData['local id'] = $orderResponse['OrderId'];
+                    }
                 }
             }catch(\Exception $exception){
                 $message = ': '.$exception->getMessage();
-                $success = FALSE;
-                $orderResponse = NULL;
+                $success = $orderSuccess = $orderitemSuccess = FALSE;
+                $orderResponse = $localId = NULL;
             }
 
-            if ($success) {
+            if ($orderSuccess) {
+                $logLevel = LogService::LEVEL_INFO;
+                $logCode .= 'suc';
                 $message = 'Successfully created order on node '.$this->_node->getNodeId();
-                if (isset($orderResponse['OrderId'])) {
-                    $localId = $orderResponse['OrderId'];
-                    $logLevel = LogService::LEVEL_INFO;
-                    $logCode .= 'suc';
-                    $message .= ' with local id.';
-                    $logData['local id'] = $localId;
-                }else{
-                    $localId = NULL;
-                    $logLevel = LogService::LEVEL_WARN;
-                    $logCode .= 'nolcid';
-                    $message .= ' but response did not contain local id.';
-                }
-
-                $this->_entityService->linkEntity($this->_node->getNodeId(), $entity, $localId);
             }else{
                 $logLevel = LogService::LEVEL_ERROR;
                 $logCode .= 'fail';
                 $message = trim('Failed to create order '.$entity->getUniqueId().$message);
             }
-            $logData['order response'] = $orderResponse;
+
+            if ($localId) {
+                $message .= ' with local id';
+                $this->_entityService->linkEntity($this->_node->getNodeId(), $entity, $localId);
+            }else{
+                $logLevel = LogService::LEVEL_ERROR;
+                $logCode = str_replace('_suc', '_nolocid', $logCode);
+                $message .= ($orderSuccess ? ' but' : ' and').' response did not contain local id';
+            }
+
+            if ($orderitemSuccess) {
+                $message .= '.';
+            }else{
+                $logLevel = LogService::LEVEL_ERROR;
+                $logCode = str_replace('_suc', '_nooitem', str_replace('_nolocid', '_nolidoi', $logCode), $logCode);
+                $message .= ' Response did not contain orderitem data.';
+            }
         }else{
             $logLevel = LogService::LEVEL_ERROR;
             $logCode .= 'err';
             $logData['local id'] = $localId;
-            $message = 'Could not create order because it seems to exist already. Local id is existing';
+            $message = 'Order create aborted because local id is existing';
             $success = FALSE;
         }
 
