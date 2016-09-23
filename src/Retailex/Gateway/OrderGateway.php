@@ -75,7 +75,7 @@ class OrderGateway extends AbstractGateway
         'DelSuburb'=>array('{entity}'=>'getDeliverySuburb'),
         'DelPhone'=>array('telephone'),
         'DelPostCode'=>array('postcode'),
-        'DelState'=>array('region'),
+        'DelState'=>array('{entity}'=>'getDeliveryState'),
         'DelCountry'=>array('country_code')
     );
 
@@ -404,19 +404,41 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
      */
     protected function getDeliverySuburb(Entity $entity)
     {
-        $street = $entity->getData('street', '');
-        if (is_array($street)) {
-            $street = implode("\n", $street);
-        }
-        $streetArray = explode("\n", str_replace(array("\r", "\n"), "\n", $street));
+        $city = $entity->getData('city', '');
 
-        if (count($streetArray) > 1 && strlen($streetArray[count($streetArray) - 1]) > 0) {
-            $suburb = array_pop($streetArray);
+        if (strlen($city) == 0) {
+            $street = $entity->getData('street', '');
+
+            if (is_array($street)) {
+                $street = implode("\n", $street);
+            }
+            $streetArray = explode("\n", str_replace(array("\r", "\n"), "\n", $street));
+
+            if (count($streetArray) > 1 && strlen($streetArray[count($streetArray) - 1]) > 0) {
+                $suburb = array_pop($streetArray);
+            }else{
+                $suburb = '-';
+            }
         }else{
-            $suburb = $entity->getData('city', '-');
+            $suburb = $city;
         }
 
         return $suburb;
+    }
+
+    /**
+     * @param Entity $entity
+     * @return string $deliveryState
+     */
+    protected function getDeliveryState(Entity $entity)
+    {
+        $state = $entity->getData('region', '-'); // setting default to "-" stops the fallback to city
+
+        if (strlen($state) == 0) {
+            $state = $entity->getData('city', '-');
+        }
+
+        return $state;
     }
 
     /**
