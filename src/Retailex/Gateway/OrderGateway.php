@@ -32,6 +32,7 @@ class OrderGateway extends AbstractGateway
 //        'ExternalOrderId'=>array('UNIQUE_ID'=>NULL), // string key: method
         'DateCreated'=>array('placed_at'=>'getDateCreated'),
         'OrderTotal'=>array('{entity}'=>'getOrderTotal'),
+        'FreightTotal'=>array('{entity}'=>'getFreightTotal'),
         'OrderStatus'=>array('status'=>'getRetailExpressStatus'),
         'CustomerId'=>array('customer'=>'getLocalId'),
         'ExternalCustomerId'=>array('customer'),
@@ -448,6 +449,15 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
     protected function getOrderTotal(Order $order)
     {
         return number_format(round($order->getOrderTotalInclShipping(), 2), 2, '.', '');
+    }
+
+    /**
+     * @param Order $order
+     * @return float $orderTotal
+     */
+    protected function getFreightTotal(Order $order)
+    {
+        return number_format(round($order->getDiscountedShippingTotal(), 2), 2, '.', '');
     }
 
     /**
