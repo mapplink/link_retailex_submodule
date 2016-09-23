@@ -636,9 +636,9 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
             foreach ($this->createOrderOrderitemsAttributeMap as $localCode=>$code) {
                 $this->assignData($orderitem, $orderitemData, $localCode, $code);
             }
-            $orderitemsData['Orderitem<'.++$orderitemNo.'>'] = $orderitemData;
+            $orderitemsData['OrderItem<'.++$orderitemNo.'>'] = $orderitemData;
         }
-        $orderitemsData = array('Orderitems'=>$orderitemsData);
+        $orderitemsData = array('OrderItems'=>$orderitemsData);
 
         return $orderitemsData;
     }
