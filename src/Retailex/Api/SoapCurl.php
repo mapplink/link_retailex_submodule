@@ -248,8 +248,12 @@ class SoapCurl implements ServiceLocatorAwareInterface
      */
     public function call($call, array $data)
     {
-        $retry = FALSE;
         libxml_use_internal_errors(TRUE);
+        $success = FALSE;
+        $retry = FALSE;
+
+        $logCode = 'rex_socu';
+        $logData = $logData = array('call'=>$call, 'data'=>$data);
 
         do {
             try{
@@ -260,20 +264,18 @@ class SoapCurl implements ServiceLocatorAwareInterface
                     $error = 'Curl preparation failed.';
                 }
 
-                $logData = array(
-                    'call'=>$call,
-                    'data'=>$data,
+                $logData = array_merge($logData, array(
                     'options'=>$this->curlOptions,
-                    'curl info'=>curl_getinfo($this->curlHandle)
-                );
+                    'info'=>curl_getinfo($this->curlHandle),
+                    'response'=>mb_substr($response, 0, 1024)
+                ));
 
-                $logCode = 'rex_socu'.substr(strtolower($this->requestType), 0, 2);
+                $logCode .= substr(strtolower($this->requestType), 0, 2);
                 if ($error) {
-                    $logCode .= '_cerr';
-                    $logMessage = 'Call failed. ERROR: '.$error;
-                    $logData['curl error'] = $error;
+                    $error = 'Call failed. ERROR: '.$error;
+                    $logData['error'] = $error;
                     $this->getServiceLocator()->get('logService')
-                        ->log(LogService::LEVEL_ERROR, $logCode, $logMessage, $logData);
+                        ->log(LogService::LEVEL_ERROR, $logCode.'_cerr', $error, $logData);
                     $responseXml = NULL;
                 }else{
                     if (is_array($response) && isset($response[$call]['any'])) {
@@ -322,26 +324,17 @@ class SoapCurl implements ServiceLocatorAwareInterface
                         $error = '['.$soapFaultObject->Code->Value.'] '.$soapFaultObject->Reason->Text;
                         $error = preg_replace('#\v+#', ' \ ', $error);
                     }elseif (isset($responseXml)) {
-                        $error = FALSE;
+                        $error = '';
                     }else{
                         $error = 'No valid response from Retail Express.';
                     }
 
-                    $logMessage = "Curl call $call ";
                     if (strlen($error) == 0) {
                         $success = TRUE;
-                        $logLevel = LogService::LEVEL_DEBUGEXTRA;
-                        $logCode .= '_suc';
-                        $logMessage .= 'succeeded. ';
                     }else{
-                        $success = FALSE;
-                        $logLevel = LogService::LEVEL_DEBUG;
-                        $logCode .= '_fail';
-                        $logMessage .= 'failed. Error message: '.$error;
+                        $error = 'Curl call '.$call.' failed. Error message: '.$error;
                         $logData['error'] = $error;
                     }
-
-//                    $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $logMessage, $logData);
                 }
             }catch (MagelinkException $exception) {
                 $success = FALSE;
@@ -350,19 +343,18 @@ class SoapCurl implements ServiceLocatorAwareInterface
             }
         }while ($retry === TRUE && $success === FALSE);
 
-        if ($success !== TRUE) {
-            $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_ERROR, 'rex_socu_fault', $error, array(
-                    'data'=>$data,
-                    'curl options'=>$this->curlOptions,
-                    'curl response'=>mb_substr($response, 0, 1024)
-                ));
-            $responseXml = NULL;
+        if ($success === TRUE) {
+            $logLevel = LogService::LEVEL_INFO;
+            $logCode .= '_suc';
+            $message = 'Successful soap curl call: '.$call;
+            unset($logCode['data']);
         }else{
-            $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_INFO, 'rex_socu_success', 'Successful soap curl call: '.$call,
-                    array('call'=>$call, 'data'=>$data, 'response'=>mb_substr($response, 0, 1024)));
+            $logLevel = LogService::LEVEL_ERROR;
+            $logCode .= '_fault';
+            $message = $error;
+            $responseXml = NULL;
         }
+        $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $message, $logData);
 
         return $responseXml;
     }
