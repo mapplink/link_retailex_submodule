@@ -288,6 +288,7 @@ class ProductGateway extends AbstractGateway
 
                 $createConfigurable = $matrixProduct = isset($retailExpressDataRow['MatrixProduct']);
                 $configurableSku = self::getSku($retailExpressDataRow['Code']);
+                $sku = self::getSku($retailExpressDataRow['ProductId']);
 
                 if ($createConfigurable) {
                     $stockOnHand = 0;
@@ -313,7 +314,7 @@ class ProductGateway extends AbstractGateway
                             break;
                         }
                     }
-                    $retailExpressData[self::getSku($retailExpressDataRow['ProductId'])] = $retailExpressDataRow;
+                    $retailExpressData[$sku] = $retailExpressDataRow;
                 }
 
                 $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_DEBUG,
