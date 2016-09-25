@@ -78,7 +78,10 @@ class CustomerGateway extends AbstractGateway
      */
     protected function retrieveEntities()
     {
-$this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_cu_re_no', 'Customer retrieval not implemented yet.', array());return 0;$retailExpressData = 0;
+        // ToDo: Implement customer retrieval
+        $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_cu_re_no',
+            'Customer retrieval not implemented yet.', array());
+        $retailExpressData = array();
 
         return count($retailExpressData);
     }

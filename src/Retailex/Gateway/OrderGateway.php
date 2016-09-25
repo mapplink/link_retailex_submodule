@@ -135,7 +135,10 @@ class OrderGateway extends AbstractGateway
      */
     protected function retrieveEntities()
     {
-$this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_o_re_no', 'Order retrieval not implemented yet.', array());return 0;$retailExpressData = 0;
+        // ToDo: Implement order retrieval.
+        $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_o_re_no',
+            'Order retrieval not implemented yet.', array());
+        $retailExpressData = array();
 
         return count($retailExpressData);
     }
