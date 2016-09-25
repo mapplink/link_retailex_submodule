@@ -11,6 +11,7 @@
 namespace Retailex\Gateway;
 
 use Entity\Entity;
+use Entity\Wrapper\Address;
 use Entity\Wrapper\Order;
 use Entity\Wrapper\Orderitem;
 use Log\Service\LogService;
@@ -72,8 +73,9 @@ class OrderGateway extends AbstractGateway
     /** @var array $this->createOrderShippingAttributeMap */
     protected $createOrderShippingAttributeMap = array(
         'DelCompany'=>array('company'),
-        'DelAddress'=>array('street'=>'getDeliveryAddress'),
-        'DelSuburb'=>array('{entity}'=>'getDeliverySuburb'),
+        'DelAddress'=>array('{entity}'=>'getAddress'),
+        'DelAddress2'=>array('{entity}'=>'getAddress2'),
+        'DelSuburb'=>array('{entity}'=>'getSuburb'),
         'DelPhone'=>array('telephone'),
         'DelPostCode'=>array('postcode'),
         'DelState'=>array('{entity}'=>'getDeliveryState'),
@@ -398,48 +400,6 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
     }
 
     /**
-     * @param string $street
-     * @return string $deliveryAddress
-     */
-    protected function getDeliveryAddress($street)
-    {
-        if (is_array($street)) {
-            $street = implode("\n", $street);
-        }
-        $address = strtok(strtok($street, "\r"), "\n");
-
-        return $address;
-    }
-
-    /**
-     * @param Entity $entity
-     * @return string $deliverySuburb
-     */
-    protected function getDeliverySuburb(Entity $entity)
-    {
-        $city = $entity->getData('city', '');
-
-        if (strlen($city) == 0) {
-            $street = $entity->getData('street', '');
-
-            if (is_array($street)) {
-                $street = implode("\n", $street);
-            }
-            $streetArray = explode("\n", str_replace(array("\r", "\n"), "\n", $street));
-
-            if (count($streetArray) > 1 && strlen($streetArray[count($streetArray) - 1]) > 0) {
-                $suburb = array_pop($streetArray);
-            }else{
-                $suburb = '-';
-            }
-        }else{
-            $suburb = $city;
-        }
-
-        return $suburb;
-    }
-
-    /**
      * @param Entity $entity
      * @return string $deliveryState
      */
@@ -520,80 +480,6 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
         }
 
         return $retailExpressStatus;
-    }
-
-    /**
-     * @param Entity $entity
-     * @param array $data
-     * @param string $localCode
-     * @param mixed $value
-     * @return array $data
-     */
-    protected function assignData(Entity $entity, &$data, $localCode, $value)
-    {
-        $error = '';
-        $logData = array('node id'=>$this->_node->getNodeId(), 'entity type'=>$entity->getTypeStr(),
-            'entity unique id'=>$entity->getUniqueId(), 'local code'=>$localCode, 'value (param)'=>$value);
-
-        if (is_array($value) && is_int(key($value)) && is_string($code = current($value))) {
-            $logData['code'] = $code;
-            $value = $entity->getData($code, NULL);
-
-        }elseif (is_array($value) && count($value) == 1) {
-            $code = $logData['code'] = key($value);
-            $method = $logData['method'] = current($value);
-            $value = NULL;
-
-            try{
-                $isLocalMethod = $logData['isLocalMethod'] = method_exists('Retailex\Gateway\OrderGateway', $method);
-
-                if ($code == '{parent}' && is_null($parent = $entity->getParent())) {
-                    $error = '. Parent is not defined.';
-
-                }elseif ($code == '{parent}' && $isLocalMethod){
-                    $logData['parameter type:id'] = $parent->getTypeStr().':'.$parent->getId();
-                    $value = $this->$method($parent);
-
-                }elseif ($code == '{parent}' && method_exists($parent, $method)) {
-                    $value = $parent->$method();
-
-                }elseif ($code == '{entity}' && $isLocalMethod) {
-                    $logData['parameter type:id'] = $entity->getTypeStr().':'.$entity->getId();
-                    $value = $this->$method($entity);
-
-                }elseif ($code == '{entity}' && method_exists($entity, $method)) {
-                    $value = $entity->$method();
-
-                }elseif (strlen($code) == 0 && $isLocalMethod) {
-                    $value = $this->$method();
-
-                }elseif (!preg_match('#^\{.*\}$#ism', $code, $match) && $isLocalMethod) {
-                    $parameter = $logData['parameter'] = $entity->getData($code, NULL);
-                    $value = $this->$method($parameter);
-
-                }else{
-                    $error = '. Mapping method '.$method.' is not existing.';
-                }
-            }catch (\Exception $exception) {
-                $error = ': '.$exception->getMessage();
-            }
-
-        }elseif (!is_scalar($value)) {
-            $error = ' with code/value '.var_export($value, TRUE).'.';
-            $code = $value = NULL;
-        }
-
-        $logData['value (return)'] = $value;
-
-        if (is_string($localCode) && strlen($localCode) > 0 && isset($value) && strlen($error) == 0) {
-            $data[$localCode] = $value;
-        }else{
-            $message = 'Error on entity data mapping'.(strlen($error) > 0 ? $error : '.');
-            $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_ERROR, 'rex_o_wr_map_err', $message, $logData);
-        }
-
-        return $data;
     }
 
     /**

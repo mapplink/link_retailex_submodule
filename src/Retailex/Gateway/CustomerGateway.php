@@ -12,6 +12,7 @@ namespace Retailex\Gateway;
 
 use Entity\Entity;
 use Entity\Service\EntityService;
+use Entity\Wrapper\Address;
 use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
 use Magelink\Exception\GatewayException;
@@ -23,7 +24,6 @@ class CustomerGateway extends AbstractGateway
 
     const GATEWAY_ENTITY = 'customer';
     const GATEWAY_ENTITY_CODE = 'cu';
-    const ATTRIBUTE_NOT_DEFINED = '> Information missing <';
 
     /** @var array $this->defaultAttributeMapping */
     protected $defaultAttributeMapping = array(
@@ -137,7 +137,9 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
             $data['Password'] = $this->getRandomPassword();
             $data['BillEmail'] = $entity->getUniqueId();
 
+            /** @var Address $billingAddress */
             $billingAddress = $entity->resolve('billing_address', 'address');
+            /** @var Address $shippingAddress */
             $shippingAddress = $entity->resolve('shipping_address', 'address');
 
             if (is_null($billingAddress) && !is_null($shippingAddress)) {
@@ -147,10 +149,9 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
             }
 
             if (!is_null($billingAddress)) {
-                $street = $billingAddress->getStreet();
-                $data['BillAddress'] = $street;
-//            $data['BillAddress2'] = $street;
-                $data['BillSuburb'] = $billingAddress->getSuburb();
+                $data['BillAddress'] = $this->getAddress($billingAddress);
+                $data['BillAddress2'] = $this->getAddress2($billingAddress);
+                $data['BillSuburb'] = $this->getSuburb($billingAddress);
 
                 foreach ($this->billingAttributeMapping as $localCode=>$code) {
                     $value = $billingAddress->getData($code, NULL);
@@ -171,10 +172,9 @@ $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_
                 );
                 $data['DelName'] = (strlen($name) == 0 ? NULL : $name);
 
-                $street = $shippingAddress->getStreet();
-                $data['DelAddress'] = $street;
-//            $data['DelAddress2'] = $street;
-                $data['DelSuburb'] = $shippingAddress->getSuburb();
+                $data['DelAddress'] = $this->getAddress($shippingAddress);
+                $data['DelAddress2'] = $this->getAddress2($shippingAddress);
+                $data['DelSuburb'] = $this->getSuburb($shippingAddress);
 
                 foreach ($this->shippingAttributeMapping as $localCode=>$code) {
                     $value = $shippingAddress->getData($code, NULL);
