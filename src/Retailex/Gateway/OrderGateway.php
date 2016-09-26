@@ -471,7 +471,7 @@ class OrderGateway extends AbstractGateway
      */
     protected function getOrderitemReference(Orderitem $orderitem)
     {
-        return 'Magelink unique id: '.$orderitem->getUniqueId();
+        return 'UID '.$orderitem->getUniqueId();
     }
 
     /**
