@@ -298,13 +298,21 @@ class SoapCurl implements ServiceLocatorAwareInterface
 
                     $logData['response'] = mb_substr($response, 0, 1024);
 
+                    $error = '';
                     try{
                         if (isset($soapFaultMatches[0])) {
                             $responseXml = NULL;
                             $soapFaultObject = new \SimpleXMLElement(str_replace('soap:', '', $soapFaultMatches[0]));
                         }elseif (isset($responseMatches[1])) {
                             $responseXml = new \SimpleXMLElement($responseMatches[1]);
-                            $soapFaultObject = NULL;
+                            $response = current($responseXml->xpath('//Response'));
+                            if (isset($response->Error)) {
+                                $error = $response->Error;
+                                $responseXml = NULL;
+                            }else{
+                                $soapFaultObject = NULL;
+                            }
+                            unset($response);
                         }else{
                             $responseXml = NULL;
                             $soapFaultObject = (object) array(
@@ -325,7 +333,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
                         $error = preg_replace('#\v+#', ' \ ', $error);
                     }elseif (isset($responseXml)) {
                         $error = '';
-                    }else{
+                    }elseif (strlen($error) == 0) {
                         $error = 'No valid response from Retail Express.';
                     }
 
