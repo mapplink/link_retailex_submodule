@@ -11,7 +11,6 @@
 namespace Retailex\Gateway;
 
 use Entity\Entity;
-use Entity\Wrapper\Address;
 use Entity\Wrapper\Order;
 use Entity\Wrapper\Orderitem;
 use Log\Service\LogService;
@@ -146,11 +145,11 @@ class OrderGateway extends AbstractGateway
 
     /**
      * Write out all the updates to the given entity.
-     * @param \Entity\Entity $entity
+     * @param Entity $entity
      * @param string[] $attributes
      * @param int $type
      */
-    public function writeUpdates(\Entity\Entity $entity, $attributes, $type = \Entity\Update::TYPE_UPDATE)
+    public function writeUpdates(Entity $entity, $attributes, $type = \Entity\Update::TYPE_UPDATE)
     {
         $localId = $this->getLocalId($entity);
         $orderStatus = $entity->getData('status', NULL);
