@@ -334,11 +334,9 @@ class SoapCurl implements ServiceLocatorAwareInterface
                     }else{
                         $error = 'Curl call '.$call.' failed. Error message: '.$error;
                         $logData['error'] = $error;
+                        $this->getServiceLocator()->get('logService')
+                            ->log(LogService::LEVEL_ERROR, $logCode.'_ex', $error, $logData);
                     }
-
-                    $this->getServiceLocator()->get('logService')
-                        ->log(LogService::LEVEL_ERROR, $logCode.'_ex', $error, $logData);
-
                 }
             }catch (MagelinkException $exception) {
                 $success = FALSE;
