@@ -390,16 +390,41 @@ class OrderGateway extends AbstractGateway
     }
 
     /**
+     * @param mixed $value
+     * @param mixed $entity
+     * @param bool $required
+     */
+    protected function logErrorOnRequiredField($value, $entity, $required)
+    {
+        if (is_null($value) && $required) {
+            if (is_a($entity, 'Entity')) {
+                $entity = '<'.$entity->getTypeStr().'>'.$entity->getId();
+            }elseif (is_scalar($entity)) {
+                $entity = '<'.gettype($entity).'>'.$entity;
+            }else{
+                $entity = '<'.gettype($entity).'>';
+            }
+
+            $this->getServiceLocator()->get('logService')
+                ->log(LogService::LEVEL_ERROR, $this->getLogCode().'_lid_err', 'LocalId '.$entity.' is NULL.', array());
+        }
+
+    }
+
+    /**
      * @param mixed $entity
      * @return NULL|string $localId
      */
-    protected function getLocalId($entity)
+    protected function getLocalId($entity, $required = TRUE)
     {
-        if (is_a($entity, '\Entity\Entity') || (is_scalar($entity) && (int) $entity == $entity)) {
+        if (is_a($entity, 'Entity') || (is_scalar($entity) && (int) $entity == $entity)) {
             $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $entity);
         }else{
             $localId = NULL;
         }
+
+        $this->logErrorOnRequiredField($localId, $entity, $required);
+
         return $localId;
     }
 
@@ -409,11 +434,13 @@ class OrderGateway extends AbstractGateway
      */
     protected function getProductLocalId(Orderitem $orderitem)
     {
-        $localId = $this->getLocalId($orderitem->getData('product'));
+        $localId = $this->getLocalId($orderitem->getData('product'), FALSE);
 
         if (is_null($localId)) {
             $localId = ProductGateway::getProductIdFromSku($orderitem->getSku());
         }
+
+        $this->logErrorOnRequiredField($localId, $orderitem, TRUE);
 
         return $localId;
     }
