@@ -346,7 +346,7 @@ class SoapCurl implements ServiceLocatorAwareInterface
         }while ($retry === TRUE && $success === FALSE);
 
         if ($success === TRUE) {
-            $logLevel = LogService::LEVEL_INFO;
+            $logLevel = LogService::LEVEL_DEBUG;
             $logCode .= '_suc';
             $message = 'Successful soap curl call: '.$call;
             unset($logData['data']);
