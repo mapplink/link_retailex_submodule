@@ -42,7 +42,7 @@ class OrderGateway extends AbstractGateway
     );
     /** @var array $this->createOrderitemsAttributeMap */
     protected $createOrderitemsAttributeMap = array(
-        'ProductId'=>array('product'=>'getLocalId'),
+        'ProductId'=>array('product'=>'getProductLocalId'),
         'QtyOrdered'=>array('{entity}'=>'getDeliveryQuantity'),
         'QtyFulfilled'=>0, // scalar value: default value
         'UnitPrice'=>array('{entity}'=>'getDiscountedPrice'),
@@ -391,7 +391,7 @@ class OrderGateway extends AbstractGateway
 
     /**
      * @param mixed $entity
-     * @return NULL|string
+     * @return NULL|string $localId
      */
     protected function getLocalId($entity)
     {
@@ -400,6 +400,28 @@ class OrderGateway extends AbstractGateway
         }else{
             $localId = NULL;
         }
+        return $localId;
+    }
+
+    /**
+     * @param mixed $entity
+     * @return NULL|string $localId
+     */
+    protected function getProductLocalId($entity)
+    {
+        $localId = $this->getLocalId($entity);
+
+        if (is_null($localId)) {
+            if (is_scalar($entity)) {
+                $entity = $this->_entityService->loadEntityId($this->_node->getNodeId(), $entity);
+            }
+            if (is_a($entity, '\Entity\Entity')) {
+                $localId = ProductGateway::getProductIdFromProduct($entity);
+            }else{
+                $localId = NULL;
+            }
+        }
+
         return $localId;
     }
 

@@ -28,6 +28,8 @@ class ProductGateway extends AbstractGateway
     const GATEWAY_ENTITY = 'product';
     const GATEWAY_ENTITY_CODE = 'p';
 
+    const SKU_PREFIX = 'POS-';
+
     /** @var array $this->productAttributeMap */
     protected $productAttributeMap = array(
 //        'ProductId'=>array('sku'=>'getSku'),
@@ -194,12 +196,29 @@ class ProductGateway extends AbstractGateway
     }
 
     /**
-     * @param $productId
+     * @param mixed $productId
      * @return string|NULL $sku
      */
     public static function getSku($productId)
     {
-        return 'POS-'.$productId;
+        return self::SKU_PREFIX.$productId;
+    }
+
+    /**
+     * @param Product $product
+     * @return string|NULL $productId
+     */
+    public static function getProductIdFromProduct(Product $product)
+    {
+        $sku = $product->getUniqueId();
+
+        if (substr($sku, 0, strlen(strlen(self::SKU_PREFIX))) == self::SKU_PREFIX) {
+            $productId = substr($sku, strlen(self::SKU_PREFIX));
+        }else{
+            $productId = NULL;
+        }
+
+        return $productId;
     }
 
     /**
