@@ -24,7 +24,7 @@ abstract class AbstractGateway extends BaseAbstractGateway
     const GATEWAY_NODE_CODE = 'rex';
     const GATEWAY_ENTITY_CODE = 'gey';
     const GATEWAY_ENTITY = 'generic';
-    const ATTRIBUTE_NOT_DEFINED = '> Information missing <';
+    const ATTRIBUTE_NOT_DEFINED = '-- Information missing --';
 
     /** @var \Entity\Service\EntityConfigService $this->entityConfigService */
     protected $entityConfigService = NULL;
@@ -190,10 +190,10 @@ abstract class AbstractGateway extends BaseAbstractGateway
      */
     protected function getState(Entity $entity)
     {
-        $state = $entity->getData('region', '-'); // setting default to "-" stops the fallback to city
+        $state = $entity->getData('region', self::ATTRIBUTE_NOT_DEFINED); // setting default stops the fallback to city
 
         if (strlen($state) == 0) {
-            $state = $entity->getData('city', '-');
+            $state = $entity->getData('city', self::ATTRIBUTE_NOT_DEFINED);
         }
 
         return $state;
