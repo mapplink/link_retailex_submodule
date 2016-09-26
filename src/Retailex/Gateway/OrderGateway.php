@@ -180,12 +180,12 @@ class OrderGateway extends AbstractGateway
                     $orderResponse = (array) current($responseXML->xpath('//Order'));
                     $orderitemResponse = (array) current($responseXML->xpath('//OrderItem'));
 
-                    $orderSuccess = ($orderResponse['Result'] == 'Success');
-                    $orderitemSuccess = ($orderitemResponse['Result'] == 'Success');
+                    $orderSuccess = isset($orderResponse['Result']) && $orderResponse['Result'] == 'Success';
+                    $orderitemSuccess = isset($orderitemResponse['Result']) && $orderitemResponse['Result'] == 'Success';
                     $success = $orderSuccess && $orderitemSuccess;
 
                     $message = '';
-                    if ($orderLocalId = isset($orderResponse['OrderId'])) {
+                    if (isset($orderResponse['OrderId'])) {
                         $localId = $logData['local id'] = $orderResponse['OrderId'];
                     }
                 }
