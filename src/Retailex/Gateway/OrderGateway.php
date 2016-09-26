@@ -57,7 +57,7 @@ class OrderGateway extends AbstractGateway
         'OrderId'=>array('{entity}'=>'getLocalId'),
         'MethodId'=>array('{entity}'=>'getPaymentMethodId'),
         'Amount'=>array('grand_total'),
-        'DateCreated'=>array('placed_at')
+        'DateCreated'=>array('placed_at'=>'getDateCreated')
     );
 
     /** @var array $this->createOrderBillingAttributeMap */
