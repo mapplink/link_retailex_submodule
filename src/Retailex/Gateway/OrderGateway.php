@@ -40,16 +40,17 @@ class OrderGateway extends AbstractGateway
         'BillEmail'=>array('customer_email'), // int key: attribute
         'ReceiverNews'=>0
     );
-    /** @var array $this->createOrderOrderitemsAttributeMap */
-    protected $createOrderOrderitemsAttributeMap = array(
+    /** @var array $this->createOrderitemsAttributeMap */
+    protected $createOrderitemsAttributeMap = array(
         'ProductId'=>array('product'=>'getLocalId'),
         'QtyOrdered'=>array('{entity}'=>'getDeliveryQuantity'),
         'QtyFulfilled'=>0, // scalar value: default value
         'UnitPrice'=>array('{entity}'=>'getDiscountedPrice'),
+        'TaxRateApplied'=>0.15,
         'DeliveryDueDate'=>'',
         'DeliveryMethod'=>array('{entity}'=>'getShipmentMethod'),
         'DeliveryDriverName'=>'',
-        'TaxRateApplied'=>0.15,
+        'Reference'=>array('{entity}'=>'getOrderitemReference')
     );
     /** @var array $this->paymentAttributeMap */
     protected $paymentAttributeMap = array(
@@ -450,6 +451,15 @@ class OrderGateway extends AbstractGateway
     }
 
     /**
+     * @param Orderitem $orderitem
+     * @return string $reference
+     */
+    protected function getOrderitemReference(Orderitem $orderitem)
+    {
+        return 'Magelink unique id: '.$orderitem->getUniqueId();
+    }
+
+    /**
      * @param string $status
      * @return string $retailExpressStatus
      */
@@ -519,7 +529,7 @@ class OrderGateway extends AbstractGateway
 
         foreach ($order->getOrderitems() as $orderitem) {
             $orderitemData = array();
-            foreach ($this->createOrderOrderitemsAttributeMap as $localCode=>$code) {
+            foreach ($this->createOrderitemsAttributeMap as $localCode=>$code) {
                 $this->assignData($orderitem, $orderitemData, $localCode, $code);
             }
             $orderitemsData['OrderItem<'.++$orderitemNo.'>'] = $orderitemData;
@@ -548,4 +558,5 @@ class OrderGateway extends AbstractGateway
 
         return $paymentData;
     }
+
 }
