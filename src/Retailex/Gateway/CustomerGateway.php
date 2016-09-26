@@ -14,7 +14,6 @@ use Entity\Entity;
 use Entity\Service\EntityService;
 use Entity\Wrapper\Address;
 use Log\Service\LogService;
-use Magelink\Exception\MagelinkException;
 use Magelink\Exception\GatewayException;
 use Magelink\Exception\SyncException;
 

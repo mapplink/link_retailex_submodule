@@ -10,6 +10,9 @@
 
 namespace Retailex\Gateway;
 
+use Entity\Entity;
+use Entity\Wrapper\Address;
+use Log\Service\LogService;
 use Magelink\Exception\MagelinkException;
 use Magelink\Exception\GatewayException;
 use Node\AbstractGateway as BaseAbstractGateway;
