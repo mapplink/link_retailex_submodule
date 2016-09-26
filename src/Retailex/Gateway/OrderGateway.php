@@ -42,7 +42,7 @@ class OrderGateway extends AbstractGateway
     );
     /** @var array $this->createOrderitemsAttributeMap */
     protected $createOrderitemsAttributeMap = array(
-        'ProductId'=>array('product'=>'getProductLocalId'),
+        'ProductId'=>array('{entity}'=>'getProductLocalId'),
         'QtyOrdered'=>array('{entity}'=>'getDeliveryQuantity'),
         'QtyFulfilled'=>0, // scalar value: default value
         'UnitPrice'=>array('{entity}'=>'getDiscountedPrice'),
@@ -407,19 +407,12 @@ class OrderGateway extends AbstractGateway
      * @param mixed $entity
      * @return NULL|string $localId
      */
-    protected function getProductLocalId($entity)
+    protected function getProductLocalId(Orderitem $orderitem)
     {
-        $localId = $this->getLocalId($entity);
+        $localId = $this->getLocalId($orderitem->getData('product'));
 
         if (is_null($localId)) {
-            if (is_scalar($entity)) {
-                $entity = $this->_entityService->loadEntityId($this->_node->getNodeId(), $entity);
-            }
-            if (is_a($entity, '\Entity\Entity')) {
-                $localId = ProductGateway::getProductIdFromProduct($entity);
-            }else{
-                $localId = NULL;
-            }
+            $localId = ProductGateway::getProductIdFromSku($orderitem->getSku());
         }
 
         return $localId;

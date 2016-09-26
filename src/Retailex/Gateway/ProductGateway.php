@@ -205,14 +205,12 @@ class ProductGateway extends AbstractGateway
     }
 
     /**
-     * @param Product $product
+     * @param string $sku
      * @return string|NULL $productId
      */
-    public static function getProductIdFromProduct(Product $product)
+    public static function getProductIdFromSku($sku)
     {
-        $sku = $product->getUniqueId();
-
-        if (substr($sku, 0, strlen(strlen(self::SKU_PREFIX))) == self::SKU_PREFIX) {
+        if (substr($sku, 0, strlen(self::SKU_PREFIX)) == self::SKU_PREFIX) {
             $productId = substr($sku, strlen(self::SKU_PREFIX));
         }else{
             $productId = NULL;
