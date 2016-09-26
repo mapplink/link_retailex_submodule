@@ -184,4 +184,19 @@ abstract class AbstractGateway extends BaseAbstractGateway
         return $suburb;
     }
 
+    /**
+     * @param Entity $entity
+     * @return string $deliveryState
+     */
+    protected function getState(Entity $entity)
+    {
+        $state = $entity->getData('region', '-'); // setting default to "-" stops the fallback to city
+
+        if (strlen($state) == 0) {
+            $state = $entity->getData('city', '-');
+        }
+
+        return $state;
+    }
+
 }

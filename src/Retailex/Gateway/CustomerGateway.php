@@ -47,7 +47,6 @@ class CustomerGateway extends AbstractGateway
         'DelCompany'=>'company',
         'DelPhone'=>'telephone',
         'DelPostCode'=>'postcode',
-        'DelState'=>'region',
         'DelCountry'=>'country_code'
     );
 
@@ -177,6 +176,7 @@ class CustomerGateway extends AbstractGateway
                 $data['DelAddress'] = $this->getAddress($shippingAddress);
                 $data['DelAddress2'] = $this->getAddress2($shippingAddress);
                 $data['DelSuburb'] = $this->getSuburb($shippingAddress);
+                $data['DelState'] = $this->getState($shippingAddress);
 
                 foreach ($this->shippingAttributeMapping as $localCode=>$code) {
                     $value = $shippingAddress->getData($code, NULL);

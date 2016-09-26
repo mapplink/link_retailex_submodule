@@ -78,7 +78,7 @@ class OrderGateway extends AbstractGateway
         'DelSuburb'=>array('{entity}'=>'getSuburb'),
         'DelPhone'=>array('telephone'),
         'DelPostCode'=>array('postcode'),
-        'DelState'=>array('{entity}'=>'getDeliveryState'),
+        'DelState'=>array('{entity}'=>'getState'),
         'DelCountry'=>array('country_code')
     );
 
@@ -400,21 +400,6 @@ class OrderGateway extends AbstractGateway
             $localId = NULL;
         }
         return $localId;
-    }
-
-    /**
-     * @param Entity $entity
-     * @return string $deliveryState
-     */
-    protected function getDeliveryState(Entity $entity)
-    {
-        $state = $entity->getData('region', '-'); // setting default to "-" stops the fallback to city
-
-        if (strlen($state) == 0) {
-            $state = $entity->getData('city', '-');
-        }
-
-        return $state;
     }
 
     /**
