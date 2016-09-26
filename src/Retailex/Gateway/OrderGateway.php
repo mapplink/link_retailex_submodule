@@ -38,7 +38,7 @@ class OrderGateway extends AbstractGateway
         'CustomerId'=>array('customer'=>'getLocalId'),
         'ExternalCustomerId'=>array('customer'),
         'BillEmail'=>array('customer_email'), // int key: attribute
-        'ReceiverNews'=>0
+        'ReceivesNews'=>0
     );
     /** @var array $this->createOrderitemsAttributeMap */
     protected $createOrderitemsAttributeMap = array(
