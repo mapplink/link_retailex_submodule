@@ -171,14 +171,14 @@ class OrderGateway extends AbstractGateway
             $logData['soap data'] = $data;
 
             try{
-                $responseXML = $this->soap->call($call, $data);
-                $logData['response'] = $responseXML;
+                $responseXml = $this->soap->call($call, $data);
+                $logData['response'] = $responseXml;
 
-                if (is_null($responseXML)) {
+                if (is_null($responseXml)) {
                     throw new SyncException($call.' returned NULL.');
                 }else{
-                    $orderResponse = (array) current($responseXML->xpath('//Order'));
-                    $orderitemResponse = (array) current($responseXML->xpath('//OrderItem'));
+                    $orderResponse = (array) current($responseXml->xpath('//Order'));
+                    $orderitemResponse = (array) current($responseXml->xpath('//OrderItem'));
 
                     $orderSuccess = isset($orderResponse['Result']) && $orderResponse['Result'] == 'Success';
                     $orderitemSuccess = isset($orderitemResponse['Result']) && $orderitemResponse['Result'] == 'Success';

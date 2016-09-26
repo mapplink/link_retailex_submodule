@@ -24,7 +24,7 @@ abstract class AbstractGateway extends BaseAbstractGateway
     const GATEWAY_NODE_CODE = 'rex';
     const GATEWAY_ENTITY_CODE = 'gey';
     const GATEWAY_ENTITY = 'generic';
-    const ATTRIBUTE_NOT_DEFINED = '-- Information missing --';
+    const ATTRIBUTE_NOT_DEFINED = '-- missing --';
 
     /** @var \Entity\Service\EntityConfigService $this->entityConfigService */
     protected $entityConfigService = NULL;
