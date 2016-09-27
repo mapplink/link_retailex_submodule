@@ -225,13 +225,13 @@ class OrderGateway extends AbstractGateway
             $logLevel = LogService::LEVEL_ERROR;
             $logCode .= 'err';
             $logData['local id'] = $localId;
-            $message = 'Order create aborted because local id is existing';
+            $message = 'Order create skipped because local id is existing.';
             $success = FALSE;
         }
 
         $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $message, $logData);
 
-        if (!$success) {
+        if (isset($exception) && isset($message)) {
             throw new GatewayException($message);
         }
 
