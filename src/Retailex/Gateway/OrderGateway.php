@@ -85,7 +85,7 @@ class OrderGateway extends AbstractGateway
     /** @var array $this->methodById */
     protected static $methodById = array(
         11=>'paypal_express',
-        13=>'paymentexpress_pxpay2'
+        13=>array('paymentexpress_pxpay2', 'paymentexpress_unpaid')
     );
 
 
