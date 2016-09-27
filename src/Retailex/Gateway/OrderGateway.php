@@ -396,7 +396,7 @@ class OrderGateway extends AbstractGateway
     protected function logErrorOnRequiredField($value, $entity, $required)
     {
         if (is_null($value) && $required) {
-            if (is_a($entity, 'Entity')) {
+            if (is_a($entity, '\Entity\Entity')) {
                 $entity = '<'.$entity->getTypeStr().'>'.$entity->getId();
             }elseif (is_scalar($entity)) {
                 $entity = '<'.gettype($entity).'>'.$entity;
@@ -416,7 +416,7 @@ class OrderGateway extends AbstractGateway
      */
     protected function getLocalId($entity, $required = TRUE)
     {
-        if (is_a($entity, 'Entity') || (is_scalar($entity) && (int) $entity == $entity)) {
+        if (is_a($entity, '\Entity\Entity') || (is_scalar($entity) && (int) $entity == $entity)) {
             $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $entity);
         }else{
             $localId = NULL;
