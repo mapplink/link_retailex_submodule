@@ -227,11 +227,12 @@ class CustomerGateway extends AbstractGateway
             }
 
             $localId = $entityService->getLocalId($nodeId, $entity);
-            if ($localId) {
+            if (is_null($localId)) {
+                $type = \Entity\Update::TYPE_CREATE;
+            }else{
                 $type = \Entity\Update::TYPE_UPDATE;
                 $data['CustomerId'] = $localId;
-            }else{
-                $type = \Entity\Update::TYPE_CREATE;
+                unset($data['Password']);
             }
 
             $logData = array('type'=>$entityType, 'customer'=>(is_null($entity) ? 'NULL' : $entity->getFullArrayCopy()),
@@ -240,16 +241,16 @@ class CustomerGateway extends AbstractGateway
             try{
                 $call = 'CustomerCreateUpdate';
                 $data = array('CustomerXML'=>array('Customers'=>array('Customer'=>$data)));
-                $response = $this->soap->call($call, $data);
+                $responseXml = $this->soap->call($call, $data);
 
-                $logData['response'] = $response;
+                $logData['response'] = $responseXml;
 
-                if (strpos($response, '<Customer>') === FALSE) {
+                if (is_null($responseXml)) {
                     throw new SyncException('No valid response on '.$call);
                 }else{
-                    $customer = current($response->xpath('//Customer'));
-                    if ($customer && isset($customer->Result) && $customer->Result == 'Success') {
-                        $localId = (int) $customer->CustomerId;
+                    $customerResponse = (array) current($responseXml->xpath('//Customer'));
+                    if (isset($customerResponse['Result']) && $customerResponse['Result'] == 'Success') {
+                        $localId = $customerResponse['CustomerId'];
                     }
                 }
             }catch (\Exception $exception) {
@@ -259,7 +260,7 @@ class CustomerGateway extends AbstractGateway
             }
 
             if ($type == \Entity\Update::TYPE_CREATE) {
-                if (!$localId) {
+                if (is_null($localId)) {
                     $message = 'Error creating customer in Retailex ('.$entity->getUniqueId().'!'
                         .' Response did not contain a local id.';
                     $this->getServiceLocator()->get('logService')
