@@ -192,7 +192,7 @@ class OrderGateway extends AbstractGateway
             }catch (\Exception $exception) {
                 $message = ': '.$exception->getMessage();
                 $success = $orderSuccess = $orderitemSuccess = FALSE;
-                $orderResponse = $localId = NULL;
+                $localId = NULL;
             }
 
             if ($orderSuccess) {
@@ -214,13 +214,13 @@ class OrderGateway extends AbstractGateway
                 $message = rtrim($message, '.').($orderSuccess ? ' but' : ' and').' response did not contain local id';
             }
 
-            if ($orderitemSuccess) {
-                $message .= '.';
-            }else{
+            if (!$orderitemSuccess) {
                 $logLevel = LogService::LEVEL_ERROR;
                 $logCode = str_replace('_suc', '_nooitem', str_replace('_nolocid', '_nolidoi', $logCode), $logCode);
-                $message .= '. Response did not contain orderitem data.';
+                $message .= '. Response did not contain orderitem data';
             }
+
+            $message .= '.';
         }else{
             $logLevel = LogService::LEVEL_ERROR;
             $logCode .= 'err';
