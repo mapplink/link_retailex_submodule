@@ -552,13 +552,11 @@ class ProductGateway extends AbstractGateway
             $relink = !is_null($localProductId);
 
         }else{
+            $relink = FALSE;
             $product = $this->_entityService->loadEntityLocal($this->_node->getNodeId(), 'product', $storeId, $localId);
 
-            if (!$product instanceof Product || $product->getUniqueId() != $sku) {
-                $relink = TRUE;
+            if (!is_null($product) && (!$product instanceof Product || $product->getUniqueId() != $sku)) {
                 $product = NULL;
-            }else{
-                $relink = FALSE;
             }
 
             if ($product) {
