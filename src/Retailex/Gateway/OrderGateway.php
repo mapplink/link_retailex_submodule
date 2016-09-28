@@ -154,7 +154,7 @@ class OrderGateway extends AbstractGateway
         $localId = $this->getLocalId($entity);
         $orderStatus = $entity->getData('status', NULL);
 
-        $logCode = $this->getLogCode().'_wr_';
+        $logCode = $this->getLogCode().'_wr';
         $logData = array('order'=>$entity->getUniqueId());
 
         if ($entity->getTypeStr() !== 'order') {
@@ -189,7 +189,7 @@ class OrderGateway extends AbstractGateway
                         $localId = $logData['local id'] = $orderResponse['OrderId'];
                     }
                 }
-            }catch(\Exception $exception){
+            }catch (\Exception $exception) {
                 $message = ': '.$exception->getMessage();
                 $success = $orderSuccess = $orderitemSuccess = FALSE;
                 $orderResponse = $localId = NULL;
@@ -197,21 +197,21 @@ class OrderGateway extends AbstractGateway
 
             if ($orderSuccess) {
                 $logLevel = LogService::LEVEL_INFO;
-                $logCode .= 'suc';
+                $logCode .= '_suc';
                 $message = 'Successfully created order on node '.$this->_node->getNodeId();
             }else{
                 $logLevel = LogService::LEVEL_ERROR;
-                $logCode .= 'fail';
+                $logCode .= '_fail';
                 $message = trim('Failed to create order '.$entity->getUniqueId().$message);
             }
 
             if ($localId) {
-                $message .= ' with local id';
+                $message = rtrim($message, '.').' with local id';
                 $this->_entityService->linkEntity($this->_node->getNodeId(), $entity, $localId);
             }else{
                 $logLevel = LogService::LEVEL_ERROR;
                 $logCode = str_replace('_suc', '_nolocid', $logCode);
-                $message .= ($orderSuccess ? ' but' : ' and').' response did not contain local id';
+                $message = rtrim($message, '.').($orderSuccess ? ' but' : ' and').' response did not contain local id';
             }
 
             if ($orderitemSuccess) {
@@ -219,7 +219,7 @@ class OrderGateway extends AbstractGateway
             }else{
                 $logLevel = LogService::LEVEL_ERROR;
                 $logCode = str_replace('_suc', '_nooitem', str_replace('_nolocid', '_nolidoi', $logCode), $logCode);
-                $message .= ' Response did not contain orderitem data.';
+                $message .= '. Response did not contain orderitem data.';
             }
         }else{
             $logLevel = LogService::LEVEL_ERROR;
