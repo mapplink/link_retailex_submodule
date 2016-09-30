@@ -222,7 +222,7 @@ class OrderGateway extends AbstractGateway
 
             $message .= '.';
         }else{
-            $logLevel = LogService::LEVEL_ERROR;
+            $logLevel = LogService::LEVEL_INFO;
             $logCode .= 'err';
             $logData['local id'] = $localId;
             $message = 'Order create skipped because local id is existing.';
