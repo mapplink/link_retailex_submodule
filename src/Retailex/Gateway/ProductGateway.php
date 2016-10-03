@@ -788,7 +788,7 @@ class ProductGateway extends AbstractGateway
      */
     public function writeUpdates(Entity $entity, $attributes, $type = Update::TYPE_UPDATE)
     {
-        return FALSE;
+        return NULL;
 
         $nodeId = $this->_node->getNodeId();
         $sku = $entity->getUniqueId();
@@ -831,6 +831,7 @@ class ProductGateway extends AbstractGateway
                     array('attributes'=>$attributes),
                     array('entity'=>$entity)
                 );
+            $success = TRUE;
         }else{
             /** @var RetailexService $magentoService */
             $magentoService = $this->getServiceLocator()->get('magentoService');
@@ -890,7 +891,10 @@ class ProductGateway extends AbstractGateway
             $localId = $this->_entityService->getLocalId($this->_node->getNodeId(), $entity);
 
             $storeDataByStoreId = $this->_node->getStoreViews();
-            if (count($storeDataByStoreId) > 0 && $type != Update::TYPE_DELETE) {
+            if (count($storeDataByStoreId) === 0 || $type == Update::TYPE_DELETE) {
+                $success = TRUE;
+
+            }else{
                 $dataPerStore[0] = $data;
                 foreach (array('price', 'special_price', 'msrp', 'cost') as $code) {
                     if (array_key_exists($code, $data)) {
@@ -934,6 +938,7 @@ class ProductGateway extends AbstractGateway
                     array('store data'=>$storeDataByStoreId)
                 );
 
+                $success = TRUE;
                 foreach ($storeIds as $storeId) {
                     $productData = $dataPerStore[$storeId];
                     $productData['website_ids'] = $websiteIds;
@@ -1089,7 +1094,7 @@ class ProductGateway extends AbstractGateway
                                     throw new MagelinkException(
                                         'Retailex complained duplicate SKU but we cannot find a duplicate!'
                                     );
-
+                                    $success = FALSE;
                                 }else{
                                     $found = FALSE;
                                     foreach ($check as $row) {
@@ -1111,6 +1116,7 @@ class ProductGateway extends AbstractGateway
                                         $message = 'Retailex found duplicate SKU '.$sku
                                             .' but we could not replicate. Database fault?';
                                         throw new MagelinkException($message);
+                                        $success = FALSE;
                                     }
                                 }
                             }
@@ -1129,12 +1135,15 @@ class ProductGateway extends AbstractGateway
                         }else{
                             $message = 'Error creating product '.$sku.' in Retailex!';
                             throw new MagelinkException($message, 0, $soapFault);
+                            $success = FALSE;
                         }
                     }
                 }
                 unset($dataPerStore);
             }
         }
+
+        return $success;
     }
 
     /**

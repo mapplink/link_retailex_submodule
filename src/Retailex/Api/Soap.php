@@ -15,7 +15,6 @@ use Magelink\Exception\MagelinkException;
 use Retailex\Node;
 use Retailex\Api\Soap\Client;
 use Retailex\Service\RetailexConfigService;
-use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
 
