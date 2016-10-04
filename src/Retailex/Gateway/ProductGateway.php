@@ -39,11 +39,12 @@ class ProductGateway extends AbstractGateway
 //        'ManageStock'=>NULL,
         'MasterPOSPrice'=>'price',
         'DiscountedPrice'=>'special_price',
+//        'PromotionalPriceExpiry'=>'special_to_date',
 //        'TaxRate'=>FALSE,
         'Taxable'=>'taxable',
 //        'ChannelId'=>NULL
     );
-    /** @var array $this->productAttributeMap */
+    /** @var array $this->productAttributeMapOptional */
     protected $productAttributeMapOptional = array(
         'RRP'=>'msrp',
 //        'SKU'=>NULL,
@@ -858,13 +859,13 @@ class ProductGateway extends AbstractGateway
                         $data[$code] = $value;
                         break;
                     case 'enabled':
-                        $data['status'] = ($value == 1 ? 1 : 2);
+//                        $data['status'] = ($value == 1 ? 1 : 2);
                         break;
                     case 'taxable':
-                        $data['tax_class_id'] = ($value == 1 ? 2 : 1);
+//                        $data['tax_class_id'] = ($value == 1 ? 2 : 1);
                         break;
                     case 'visible':
-                        $data['visibility'] = ($value == 1 ? 4 : 1);
+//                        $data['visibility'] = ($value == 1 ? 4 : 1);
                         break;
                         // Ignore attributes
                         break;
