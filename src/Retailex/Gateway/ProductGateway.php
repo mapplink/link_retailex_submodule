@@ -78,7 +78,9 @@ class ProductGateway extends AbstractGateway
     /** @var array $this->mappedCreateProductDataPreset */
     protected $mappedCreateProductDataPreset = array('configurable_sku'=>'<none>', 'enabled'=>1, 'type'=>'simple');
     /** @var array $this->mappedUpdateProductDataPreset */
-    protected $mappedUpdateProductDataPreset = array('enabled'=>1);
+    protected $mappedUpdateProductDataPreset = array();
+    /** @var array $this->mappedUpdateProductUnset */
+    protected $mappedUpdateProductUnset = array('enabled');
 
     /** @var array $this->staticAttributes */
     protected $staticAttributes = array('storeId'=>NULL);
@@ -624,15 +626,16 @@ class ProductGateway extends AbstractGateway
 
         if ($needsUpdate) {
             $data = array_replace($this->mappedUpdateProductDataPreset, $data);
+            foreach ($this->mappedUpdateProductUnset as $code) {
+                $data[$code] = NULL;
+            }
             $this->_entityService->updateEntity($this->_node->getNodeId(), $product, $data, FALSE);
 
-            $this->getServiceLocator()->get('logService')
-                ->log(LogService::LEVEL_INFO,
-                    'rex_p_re_upd',
-                    'Updated product '.$sku,
-                    array('sku'=>$sku),
-                    array('node'=>$this->_node, 'product'=>$product, 'data'=>$data)
-                );
+            $this->getServiceLocator()->get('logService')->log(LogService::LEVEL_INFO, 'rex_p_re_upd',
+                'Updated product '.$sku,
+                array('sku'=>$sku),
+                array('node'=>$this->_node, 'product'=>$product, 'data'=>$data)
+            );
         }
 
         return $product;
