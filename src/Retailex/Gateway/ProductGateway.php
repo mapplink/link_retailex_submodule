@@ -68,8 +68,8 @@ class ProductGateway extends AbstractGateway
 //        'ProductId'=>array('sku'=>'getSku'),
 //        'SKU'=>NULL,
 //        'LastUpdated'=>NULL,
-//        'StockAvailable'=>NULL,
-        'StockOnHand'=>'qty_soh',
+        'StockAvailable'=>'qty_soh',
+//        'StockOnHand'=>'qty_soh',
 //        'StockOnOrder'=>NULL,
 //        'ChannelId'=>NULL
     );
