@@ -35,7 +35,7 @@ class ProductGateway extends AbstractGateway
 //        'ProductId'=>array('sku'=>'getSku'),
         'Description'=>'name',
         'SizeId'=>array('size'=>'getSize'),
-        'ColourId'=>array('color'=>'getColour'),
+        'ColourId'=>array('color'=>'getColor'),
 //        'ManageStock'=>NULL,
         'MasterPOSPrice'=>'price',
         'DiscountedPrice'=>'special_price',
@@ -86,8 +86,8 @@ class ProductGateway extends AbstractGateway
     protected $staticAttributes = array('storeId'=>NULL);
 
     // TECHNICAL DEBT // ToDo: Move mapping to config
-    /** @var array self::$colourById */
-    protected static $colourById = array(382=>'10K/Diamond', 383=>'10K/Emerald', 384=>'10K/Ruby', 387=>'10K/Silver/Dia',
+    /** @var array self::$colorById */
+    protected static $colorById = array(382=>'10K/Diamond', 383=>'10K/Emerald', 384=>'10K/Ruby', 387=>'10K/Silver/Dia',
         386=>'10K/Silver/Ruby', 479=>'14ct Gold', 385=>'18K', 349=>'9ct Gold', 102=>'Alabaster', 1560=>'Alligator',
         228=>'Aniseed', 448=>'Anthracite', 121=>'Army', 301=>'Ash', 1510=>'Ashes', 375=>'Ashphalt/Tarseal', 442=>'Ballet',
         423=>'Basic Black', 1551=>'Basic Grey', 1493=>'Basic Navy', 103=>'Beige', 5=>'Black', 1532=>'Black Angel',
@@ -223,21 +223,21 @@ class ProductGateway extends AbstractGateway
     }
 
     /**
-     * @param int $colourId
-     * @return string|NULL $colourString
+     * @param int $colorId
+     * @return string|NULL $colorString
      */
-    public static function getColour($colourId)
+    public static function getColor($colorId)
     {
-        return self::getMappedString('colour', (int) $colourId);
+        return self::getMappedString('color', (int) $colorId);
     }
 
     /**
-     * @param int $colourString
-     * @return int|NULL $colourId
+     * @param int $colorString
+     * @return int|NULL $colorId
      */
-    public static function getColourId($colourString)
+    public static function getColorId($colorString)
     {
-        return self::getMappedId('colour', $colourString);
+        return self::getMappedId('color', $colorString);
     }
 
     /**
