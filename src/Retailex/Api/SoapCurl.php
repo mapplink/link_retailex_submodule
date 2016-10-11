@@ -276,7 +276,9 @@ class SoapCurl implements ServiceLocatorAwareInterface
                     $logData['error'] = $error;
                     $this->getServiceLocator()->get('logService')
                         ->log(LogService::LEVEL_ERROR, $logCode.'_cerr', $error, $logData);
+
                     $responseXml = NULL;
+                    unset($error);
                 }else{
                     if (is_array($response) && isset($response[$call]['any'])) {
                         $response = $response[$call]['any'];
@@ -340,10 +342,18 @@ class SoapCurl implements ServiceLocatorAwareInterface
                     if (strlen($error) == 0) {
                         $success = TRUE;
                     }else{
+                        if (strpos($error, ' can only be called every ') === FALSE) {
+                            $logLevel = LogService::LEVEL_ERROR;
+                        }else{
+                            $logLevel = LogService::LEVEL_INFO;
+                        }
                         $error = 'Curl call '.$call.' failed. Error message: '.$error;
                         $logData['error'] = $error;
+
                         $this->getServiceLocator()->get('logService')
-                            ->log(LogService::LEVEL_ERROR, $logCode.'_ex', $error, $logData);
+                            ->log($logLevel, $logCode.'_ex', $error, $logData);
+
+                        unset($error);
                     }
                 }
             }catch (MagelinkException $exception) {
@@ -358,13 +368,16 @@ class SoapCurl implements ServiceLocatorAwareInterface
             $logCode .= '_suc';
             $message = 'Successful soap curl call: '.$call;
             unset($logData['data']);
-        }else{
+        }elseif (isset($error) && strlen($error) == 0) {
             $logLevel = LogService::LEVEL_ERROR;
             $logCode .= '_fault';
             $message = $error;
             $responseXml = NULL;
         }
-        $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $message, $logData);
+
+        if (isset($message)) {
+            $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $message, $logData);
+        }
 
         return $responseXml;
     }
