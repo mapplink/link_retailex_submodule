@@ -588,14 +588,20 @@ class OrderGateway extends AbstractGateway
     protected function getOrderAddPaymentData(Order $order, $skipOrderId = FALSE)
     {
         $paymentData = array();
+        $status = $order->getData('status', NULL);
 
-        foreach ($this->paymentAttributeMap as $localCode=>$code) {
-            if ($localCode != 'OrderId' || !$skipOrderId) {
-                $this->assignData($order, $paymentData, $localCode, $code);
+        if (isset($status) && !Magento2OrderGateway::hasOrderStatePending($status)
+          && !Magento2OrderGateway::hasOrderStateCanceled($status)) {
+            foreach ($this->paymentAttributeMap as $localCode=>$code) {
+                if ($localCode != 'OrderId' || !$skipOrderId) {
+                    $this->assignData($order, $paymentData, $localCode, $code);
+                }
             }
         }
 
-        $paymentData = array('OrderPayments'=>array('OrderPayment'=>$paymentData));
+        if (count($paymentData) > 0) {
+            $paymentData = array('OrderPayments'=>array('OrderPayment'=>$paymentData));
+        }
 
         return $paymentData;
     }
