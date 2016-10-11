@@ -311,7 +311,7 @@ class OrderGateway extends AbstractGateway
 
                     if (isset($localId)) {
                         $call = 'OrderAddPayment';
-                        $data = array('PaymentXML'=>$this->getOrderAddPaymentData($order));
+                        $data = array('OrderPaymentXML'=>$this->getOrderAddPaymentData($order));
 
                         try{
                             $response = $this->soap->call($call, $data);
