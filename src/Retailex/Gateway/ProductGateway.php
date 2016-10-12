@@ -428,7 +428,7 @@ class ProductGateway extends AbstractGateway
      */
     protected function isConfigurable(array $productData)
     {
-        $isConfigurable = isset($productData['type']) && $productData['type'] = Product::TYPE_CONFIGURABLE;
+        $isConfigurable = (isset($productData['type']) && $productData['type'] == Product::TYPE_CONFIGURABLE);
         return $isConfigurable;
     }
 
@@ -466,7 +466,8 @@ class ProductGateway extends AbstractGateway
 
         if ($entityType == 'product') {
             $logCode = 'rex_p_re_map';
-            if ($isConfigurable = $this->isConfigurable($data)) {
+            $isConfigurable = $this->isConfigurable($data);
+            if ($isConfigurable) {
                 $mappedData['type'] = Product::TYPE_CONFIGURABLE;
             }
         }else{
@@ -510,7 +511,7 @@ class ProductGateway extends AbstractGateway
                         foreach ($codes as $code) {
                             $mappedData[$code] = $value;
                         }
-                    }elseif ($required) {
+                    }elseif ($required && (!$isConfigurable || $code != 'configurable_sku')) {
                         $logData = array('is configurable'=>$isConfigurable, 'local code'=>$localCode, 'code'=>$code,
                             'value'=>$value, 'data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
                         $logService->log(LogService::LEVEL_ERROR, $logCode.'_err', $error, $logData);
