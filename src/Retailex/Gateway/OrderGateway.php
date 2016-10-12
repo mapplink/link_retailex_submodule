@@ -226,7 +226,8 @@ class OrderGateway extends AbstractGateway
             $logCode .= 'err';
             $logData['local id'] = $localId;
             $message = 'Order create skipped because local id is existing.';
-            $success = FALSE;
+            // Mark as success because the order does not need to be created any more
+            $success = TRUE;
         }
 
         $this->getServiceLocator()->get('logService')->log($logLevel, $logCode, $message, $logData);
