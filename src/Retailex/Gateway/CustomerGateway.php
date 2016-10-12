@@ -281,7 +281,7 @@ class CustomerGateway extends AbstractGateway
      */
     public function writeAction(\Entity\Action $action)
     {
-        return FALSE;
+        return NULL;
 
         /** @var \Entity\Service\EntityService $entityService */
 /*        $entityService = $this->getServiceLocator()->get('entityService');
