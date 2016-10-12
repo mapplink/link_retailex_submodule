@@ -317,9 +317,13 @@ class OrderGateway extends AbstractGateway
                             $response = $this->soap->call($call, $data);
                             $logData['response'] = $response;
 
-                            $resultResponse = current($response->xpath('//Result'));
-                            $logData['response result'] = $resultResponse;
-                            $success = ($resultResponse == 'Success');
+                            if (is_null($response)) {
+                                $resultResponse = current($response->xpath('//Result'));
+                                $logData['response result'] = $resultResponse;
+                                $success = ($resultResponse == 'Success');
+                            }else{
+                                $success = FALSE;
+                            }
                         }catch(\Exception $exception){
                             throw new GatewayException($exception->getMessage(), $exception->getCode(), $exception);
                         }
