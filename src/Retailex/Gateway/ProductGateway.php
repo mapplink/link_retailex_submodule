@@ -352,7 +352,7 @@ class ProductGateway extends AbstractGateway
                 $productData = array_replace_recursive(
                     $this->getMappedData('product', $this->productAttributeMap, $retailExpressProductData),
                     $this->getMappedData('product', $this->productAttributeMapOptional, $retailExpressProductData, FALSE),
-                    $this->getMappedData('product', $this->productAttributeCustom, $retailExpressProductData)
+                    $this->getMappedData('product', $this->productAttributeCustom, $retailExpressProductData, FALSE)
                 );
 
                 $this->getServiceLocator()->get('logService')->log(
@@ -511,7 +511,7 @@ class ProductGateway extends AbstractGateway
                         foreach ($codes as $code) {
                             $mappedData[$code] = $value;
                         }
-                    }elseif ($required && (!$isConfigurable || $code != 'configurable_sku')) {
+                    }elseif ($required) {
                         $logData = array('is configurable'=>$isConfigurable, 'local code'=>$localCode, 'code'=>$code,
                             'value'=>$value, 'data'=>$data, 'sanitised'=>$sanitisedData, 'mapped'=>$mappedData);
                         $logService->log(LogService::LEVEL_ERROR, $logCode.'_err', $error, $logData);
