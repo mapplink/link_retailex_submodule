@@ -47,8 +47,8 @@ class SoapCurl implements ServiceLocatorAwareInterface
         CURLOPT_MAXREDIRS=>10,
         CURLOPT_TIMEOUT=>30,
         CURLOPT_HTTP_VERSION=>CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => "POST",
-        CURLOPT_HTTPHEADER => array('cache-control: no-cache', 'content-type: text/xml')
+        CURLOPT_CUSTOMREQUEST=>'POST',
+        CURLOPT_HTTPHEADER=>array('cache-control: no-cache', 'content-type: text/xml')
     );
     /** @var array $this->clientOptions */
     protected $clientOptions = array(
@@ -364,7 +364,11 @@ class SoapCurl implements ServiceLocatorAwareInterface
         }while ($retry === TRUE && $success === FALSE);
 
         if ($success === TRUE) {
-            $logLevel = LogService::LEVEL_DEBUG;
+            if (strpos($call, 'Bulk') === FALSE) {
+                $logLevel = LogService::LEVEL_DEBUG;
+            }else{
+                $logLevel = LogService::LEVEL_INFO;
+            }
             $logCode .= '_suc';
             $message = 'Successful soap curl call: '.$call;
             unset($logData['data']);
