@@ -311,17 +311,17 @@ class ProductGateway extends AbstractGateway
                 $sku = self::getSku($retailExpressDataRow['ProductId']);
 
                 if ($createConfigurable) {
-                    $stockOnHand = 0;
+                    $stockAvailable = 0;
                     foreach ($products as $associatedProduct) {
                         $associatedProduct['configurable_sku'] = $configurableSku;
                         $associatedProduct['visible'] = 0;
                         $sku = self::getSku($associatedProduct['ProductId']);
                         $retailExpressData[$sku] = $associatedProduct;
-                        $stockOnHand += $associatedProduct['StockOnHand'];
+                        $stockAvailable += $associatedProduct['StockAvailable'];
                     }
 
                     $configurableProduct = $retailExpressDataRow;
-                    $configurableProduct['StockOnHand'] = $stockOnHand;
+                    $configurableProduct['StockAvailable'] = $stockAvailable;
                     $configurableProduct['type'] = Product::TYPE_CONFIGURABLE;
                     $configurableProduct['visible'] = 1;
                     $retailExpressData[$configurableSku] = $configurableProduct;
