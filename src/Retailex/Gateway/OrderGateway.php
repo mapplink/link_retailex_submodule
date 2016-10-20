@@ -318,7 +318,7 @@ class OrderGateway extends AbstractGateway
                             $response = $this->soap->call($call, $data);
                             $logData['response'] = $response;
 
-                            if (is_null($response)) {
+                            if (!is_null($response)) {
                                 $resultResponse = current($response->xpath('//Result'));
                                 $logData['response result'] = $resultResponse;
                                 $success = ($resultResponse == 'Success');
