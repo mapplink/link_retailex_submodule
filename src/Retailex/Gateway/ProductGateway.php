@@ -164,7 +164,8 @@ class ProductGateway extends AbstractGateway
         268=>'Vintage Black', 369=>'Violet', 1548=>'Volcanic', 1482=>'Wallpaper', 4=>'White', 1554=>'White Dove',
         435=>'White Emblem', 422=>'White Eyelet', 440=>'White Veil', 35=>'White/Black', 118=>'White/Blue', 119=>'White/Green',
         286=>'White/Multi', 265=>'White/Navy', 101=>'White/Red', 430=>'Whitelawn', 237=>'Whitewash', 451=>'X', 13=>'Yellow',
-        1508=>'Yellow Fleece', 464=>'Yellow/Orange', 238=>'Zambesi Black', 1549=>'Zinc');
+        1508=>'Yellow Fleece', 464=>'Yellow/Orange', 238=>'Zambesi Black', 1549=>'Zinc', 1580=>'Orange/Green',
+        1581=>'Green/Blue', 1583=>'Blue/Green');
     /** @var array self::$sizeById */
     protected static $sizeById = array(8=>'8', 2=>'XS', 9=>'10', 3=>'S', 10=>'12', 4=>'M', 11=>'14', 5=>'L', 12=>'16', 6=>'XL',
         7=>'XXL', 50=>'0', 37=>'1', 51=>'11', 52=>'13', 91=>'15', 38=>'2', 53=>'20', 54=>'21', 55=>'22', 78=>'22.5',
