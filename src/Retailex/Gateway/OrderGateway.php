@@ -151,7 +151,7 @@ class OrderGateway extends AbstractGateway
      */
     public function writeUpdates(Entity $entity, $attributes, $type = \Entity\Update::TYPE_UPDATE)
     {
-        $localId = $this->getLocalId($entity);
+        $localId = $this->getLocalId($entity, FALSE);
         $orderStatus = $entity->getData('status', NULL);
 
         $logCode = $this->getLogCode().'_wr';
