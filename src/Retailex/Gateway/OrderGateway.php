@@ -84,8 +84,32 @@ class OrderGateway extends AbstractGateway
 
     /** @var array $this->methodById */
     protected static $methodById = array(
-        11=>'paypal_express',
-        13=>array('paymentexpress_pxpay2', 'paymentexpress_unpaid')
+        // 1 => <cash>,
+        // 2 => <eftpos>,
+        // 3 => <credit card>,
+        3=>array('paymentexpress_pxpay2', 'paymentexpress_unpaid'),
+        // 4 => <cheque>,
+        // 5 => <finance>,
+        // 6 => <none>,
+        // 7 => <amex>,
+        // 8 => <online>,
+        // 9 => <direct deposit>,
+        // 10 => <refund - head office>,
+        // 11 => <gift voucher>,
+        // 12 => <on account>,
+        // 13 => <visa>,
+        // 14 => <master card>,
+        // 15 => <promotion>,
+        // 16 => <barter>,
+        // 17 => <money out>,
+        // 18 => <donation>,
+        // 20 => <loyalty>,
+        // 21 =>  <eway>,
+        // 22 => <paypal>,
+        22=>'paypal_express'
+        // 23 => <diners>,
+        // 24 => <tyro>
+        // 26 => <pc eftpos>
     );
 
 
