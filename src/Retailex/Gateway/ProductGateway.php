@@ -165,7 +165,11 @@ class ProductGateway extends AbstractGateway
         435=>'White Emblem', 422=>'White Eyelet', 440=>'White Veil', 35=>'White/Black', 118=>'White/Blue', 119=>'White/Green',
         286=>'White/Multi', 265=>'White/Navy', 101=>'White/Red', 430=>'Whitelawn', 237=>'Whitewash', 451=>'X', 13=>'Yellow',
         1508=>'Yellow Fleece', 464=>'Yellow/Orange', 238=>'Zambesi Black', 1549=>'Zinc', 1580=>'Orange/Green',
-        1581=>'Green/Blue', 1583=>'Blue/Green');
+        1581=>'Green/Blue', 1583=>'Blue/Green', 1603=>'Playlist', 1604=>'Fine Navy Stripe', 1605=>'POW', 1608=>'Blue Check',
+        1607=>'Double Pinstripe', 1606=>'Houndstooth', 1609=>'Pinstripe Mix', 1611=>'Hands', 1612=>'Citron', 1610=>'Classical',
+        1613=>'Blushing', 1614=>'John x Yoko', 1616=>'Charcoal/Putty', 1617=>'Charcoal/Yellow', 1618=>'Navy/Putty',
+        1625=>'Blue/Charcoal', 1615=>'Joy', 1619=>'Nirvana', 1620=>'Record', 1621=>'Bat Skeleton', 1622=>'Love Song',
+        1623=>'Jane', 1624=>'Kiss');
     /** @var array self::$sizeById */
     protected static $sizeById = array(8=>'8', 2=>'XS', 9=>'10', 3=>'S', 10=>'12', 4=>'M', 11=>'14', 5=>'L', 12=>'16', 6=>'XL',
         7=>'XXL', 50=>'0', 37=>'1', 51=>'11', 52=>'13', 91=>'15', 38=>'2', 53=>'20', 54=>'21', 55=>'22', 78=>'22.5',
@@ -176,6 +180,7 @@ class ProductGateway extends AbstractGateway
         44=>'50', 29=>'52', 30=>'55', 31=>'57', 70=>'6', 86=>'6.5', 48=>'61', 49=>'63', 46=>'65', 32=>'67', 71=>'7',
         88=>'7.5', 72=>'8.5', 33=>'8mm', 73=>'9', 74=>'9.5', 34=>'K', 35=>'K.5', 76=>'L1/2', 90=>'N', 92=>'N/A', 77=>'O',
         1=>'O/S', 89=>'P', 36=>'Q', 75=>'T1/2');
+
 
 
     /**
