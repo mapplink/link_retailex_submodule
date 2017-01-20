@@ -169,7 +169,7 @@ class ProductGateway extends AbstractGateway
         1607=>'Double Pinstripe', 1606=>'Houndstooth', 1609=>'Pinstripe Mix', 1611=>'Hands', 1612=>'Citron', 1610=>'Classical',
         1613=>'Blushing', 1614=>'John x Yoko', 1616=>'Charcoal/Putty', 1617=>'Charcoal/Yellow', 1618=>'Navy/Putty',
         1625=>'Blue/Charcoal', 1615=>'Joy', 1619=>'Nirvana', 1620=>'Record', 1621=>'Bat Skeleton', 1622=>'Love Song',
-        1623=>'Jane', 1624=>'Kiss');
+        1623=>'Jane', 1624=>'Kiss', 1635=>'Black/Orange');
     /** @var array self::$sizeById */
     protected static $sizeById = array(8=>'8', 2=>'XS', 9=>'10', 3=>'S', 10=>'12', 4=>'M', 11=>'14', 5=>'L', 12=>'16', 6=>'XL',
         7=>'XXL', 50=>'0', 37=>'1', 51=>'11', 52=>'13', 91=>'15', 38=>'2', 53=>'20', 54=>'21', 55=>'22', 78=>'22.5',
