@@ -85,8 +85,9 @@ class ProductGateway extends AbstractGateway
     /** @var array $this->staticAttributes */
     protected $staticAttributes = array('storeId'=>NULL);
 
-    // TECHNICAL DEBT // ToDo: Move mapping to config
+    // TECHNICAL DEBT // ToDo: Move mapping to config or retrieve it from Retail Express
     /** @var array self::$colorById */
+    //protected static $colorById = array();
     protected static $colorById = array(382=>'10K/Diamond', 383=>'10K/Emerald', 384=>'10K/Ruby', 387=>'10K/Silver/Dia',
         386=>'10K/Silver/Ruby', 479=>'14ct Gold', 385=>'18K', 349=>'9ct Gold', 102=>'Alabaster', 1560=>'Alligator',
         228=>'Aniseed', 448=>'Anthracite', 121=>'Army', 301=>'Ash', 1510=>'Ashes', 375=>'Ashphalt/Tarseal', 442=>'Ballet',
@@ -170,7 +171,9 @@ class ProductGateway extends AbstractGateway
         1613=>'Blushing', 1614=>'John x Yoko', 1616=>'Charcoal/Putty', 1617=>'Charcoal/Yellow', 1618=>'Navy/Putty',
         1625=>'Blue/Charcoal', 1615=>'Joy', 1619=>'Nirvana', 1620=>'Record', 1621=>'Bat Skeleton', 1622=>'Love Song',
         1623=>'Jane', 1624=>'Kiss', 1635=>'Black/Orange', 1636=>'Charcoal Stripe');
+    // TECHNICAL DEBT // ToDo: Move mapping to config or retrieve it from Retail Express
     /** @var array self::$sizeById */
+    //protected static $sizeById = array();
     protected static $sizeById = array(8=>'8', 2=>'XS', 9=>'10', 3=>'S', 10=>'12', 4=>'M', 11=>'14', 5=>'L', 12=>'16', 6=>'XL',
         7=>'XXL', 50=>'0', 37=>'1', 51=>'11', 52=>'13', 91=>'15', 38=>'2', 53=>'20', 54=>'21', 55=>'22', 78=>'22.5',
         56=>'23', 80=>'23.5', 57=>'24', 81=>'24.5', 58=>'25', 82=>'25.5', 59=>'26', 60=>'27', 41=>'28', 61=>'29',
@@ -180,7 +183,6 @@ class ProductGateway extends AbstractGateway
         44=>'50', 29=>'52', 30=>'55', 31=>'57', 70=>'6', 86=>'6.5', 48=>'61', 49=>'63', 46=>'65', 32=>'67', 71=>'7',
         88=>'7.5', 72=>'8.5', 33=>'8mm', 73=>'9', 74=>'9.5', 34=>'K', 35=>'K.5', 76=>'L1/2', 90=>'N', 92=>'N/A', 77=>'O',
         1=>'O/S', 89=>'P', 36=>'Q', 75=>'T1/2');
-
 
 
     /**
@@ -404,6 +406,42 @@ class ProductGateway extends AbstractGateway
         }
 
         return count($retailExpressData);
+    }
+
+    /**
+     * @param string $soapXml
+     * @return array self::$colorById
+     */
+    protected function getColoursData($soapXml)
+    {
+        if ($soapXml) {
+            $colours = current($soapXml->xpath('//Colours'));
+            foreach ($colours->children() as $colour) {
+                $colourId = (int) $colour->ColourId;
+                $colourName = (string) $colour->ColourName;
+                self::$colorById[$colourId] = $colourName;
+            }
+        }
+
+        return self::$colorById;
+    }
+
+    /**
+     * @param string $soapXml
+     * @return array self::$sizeById
+     */
+    protected function getSizesData($soapXml)
+    {
+        if ($soapXml) {
+            $sizes = current($soapXml->xpath('//Sizes'));
+            foreach ($sizes->children() as $size) {
+                $sizeId = (int) $size->SizeId;
+                $sizeName = (string) $size->SizeName;
+                self::$sizeById[$sizeId] = $sizeName;
+            }
+        }
+
+        return self::$sizeById;
     }
 
     /**
